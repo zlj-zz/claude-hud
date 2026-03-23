@@ -44,7 +44,15 @@ Then run the install command below in that session. This is a [Claude Code platf
 /claude-hud:setup
 ```
 
+If setup says no JavaScript runtime was found on Windows, install one for your shell first. The simplest fallback is Node.js LTS:
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+Then restart your shell and run `/claude-hud:setup` again.
+
 Done! Restart Claude Code to load the new statusLine config, then the HUD will appear.
+
+On Windows, make that a full Claude Code restart after setup writes the new `statusLine` config.
 
 ---
 
@@ -184,7 +192,7 @@ To disable, set `display.showUsage` to `false`.
 - AWS Bedrock models display `Bedrock` and hide usage limits (usage is managed in AWS)
 - Non-default `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_BASE_URL` settings skip usage display, because the Anthropic OAuth usage API may not apply
 - If you are behind a proxy, set `HTTPS_PROXY` (or `HTTP_PROXY`/`ALL_PROXY`) and optional `NO_PROXY`
-- For high-latency environments, increase usage API timeout with `CLAUDE_HUD_USAGE_TIMEOUT_MS` (milliseconds)
+- For high-latency environments, increase the usage API timeout with `CLAUDE_HUD_USAGE_TIMEOUT_MS` (milliseconds)
 
 ### Example Configuration
 
