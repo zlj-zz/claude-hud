@@ -1596,7 +1596,7 @@ describe('getProxyUrl', () => {
 });
 
 describe('getUsagePlanNameFallback', () => {
-  test('prefers cached planName over credentials file state', async () => {
+  test('prefers current credentials file state over a stale cached planName', async () => {
     const homeDir = await createTempHome();
 
     try {
@@ -1609,7 +1609,7 @@ describe('getUsagePlanNameFallback', () => {
       });
 
       await writeCredentials(homeDir, buildCredentials({ subscriptionType: 'claude_team_2024' }));
-      assert.equal(getUsagePlanNameFallback(homeDir), 'Max');
+      assert.equal(getUsagePlanNameFallback(homeDir), 'Team');
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

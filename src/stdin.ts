@@ -123,7 +123,7 @@ function parseRateLimitPercent(value: number | null | undefined): number | null 
     return null;
   }
 
-  return Math.floor(Math.min(100, Math.max(0, value)));
+  return Math.round(Math.min(100, Math.max(0, value)));
 }
 
 function parseRateLimitResetAt(value: number | null | undefined): Date | null {

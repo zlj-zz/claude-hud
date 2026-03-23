@@ -843,17 +843,13 @@ function getPlanName(subscriptionType: string): string | null {
 }
 
 export function getUsagePlanNameFallback(homeDir: string = os.homedir()): string | null {
-  const cachedPlanName = readCachedPlanName(homeDir);
-  if (cachedPlanName) {
-    return cachedPlanName;
-  }
-
   const subscriptionType = readFileSubscriptionType(homeDir);
-  if (!subscriptionType) {
-    return null;
+  if (subscriptionType) {
+    return getPlanName(subscriptionType);
   }
 
-  return getPlanName(subscriptionType);
+  const cachedPlanName = readCachedPlanName(homeDir);
+  return cachedPlanName ?? null;
 }
 
 /** Parse utilization value, clamping to 0-100 and handling NaN/Infinity */

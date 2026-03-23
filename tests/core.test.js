@@ -236,7 +236,7 @@ test('getUsageFromStdin parses official Claude Code rate_limits payload', () => 
 
   assert.deepEqual(usage, {
     planName: 'Max',
-    fiveHour: 7,
+    fiveHour: 8,
     sevenDay: 100,
     fiveHourResetAt: new Date(1710000000 * 1000),
     sevenDayResetAt: new Date(1710600000 * 1000),

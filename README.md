@@ -151,7 +151,7 @@ Edit `~/.claude/plugins/claude-hud/config.json` directly for advanced settings s
 | `display.showConfigCounts` | boolean | false | Show CLAUDE.md, rules, MCPs, hooks counts |
 | `display.showDuration` | boolean | false | Show session duration `⏱️ 5m` |
 | `display.showSpeed` | boolean | false | Show output token speed `out: 42.1 tok/s` |
-| `display.showUsage` | boolean | true | Show usage limits (Pro/Max/Team only) |
+| `display.showUsage` | boolean | true | Show Claude subscriber usage limits when available |
 | `display.usageBarEnabled` | boolean | true | Display usage as visual bar instead of text |
 | `display.sevenDayThreshold` | 0-100 | 80 | Show 7-day usage when >= threshold (0 = always) |
 | `display.showTokenBreakdown` | boolean | true | Show token details at high context (85%+) |
@@ -173,9 +173,11 @@ Supported color names: `red`, `green`, `yellow`, `magenta`, `cyan`, `brightBlue`
 
 `display.showMemoryUsage` is fully opt-in and only renders in `expanded` layout. It reports approximate system RAM usage from the local machine, not precise memory pressure inside Claude Code or a specific process. The number may overstate actual pressure because reclaimable OS cache and buffers can still be counted as used memory.
 
-### Usage Limits (Pro/Max/Team)
+### Usage Limits
 
-Usage display is **enabled by default** for Claude Pro, Max, and Team subscribers. It shows your rate limit consumption on line 2 alongside the context bar.
+Usage display is **enabled by default** for Claude subscribers when Claude Code provides rate-limit data or the HUD can fall back to the Anthropic OAuth usage API. It shows your rate limit consumption on line 2 alongside the context bar.
+
+Free/weekly-only accounts render the weekly window by itself instead of showing a ghost `5h: --` placeholder.
 
 The 7-day percentage appears when above the `display.sevenDayThreshold` (default 80%):
 
@@ -186,14 +188,15 @@ Context █████░░░░░ 45% │ Usage ██░░░░░░░
 To disable, set `display.showUsage` to `false`.
 
 **Requirements:**
-- Claude Pro, Max, or Team subscription (not available for API users)
-- OAuth credentials from Claude Code (created automatically when you log in)
+- Claude subscription usage data from Claude Code stdin or the Anthropic OAuth usage API
+- Not available for API-key-only users
 
 **Troubleshooting:** If usage doesn't appear:
-- Ensure you're logged in with a Pro/Max/Team account (not API key)
+- Ensure you're logged in with a Claude subscriber account (not API key)
 - Check `display.showUsage` is not set to `false` in config
 - API users see no usage display (they have pay-per-token, not rate limits)
 - AWS Bedrock models display `Bedrock` and hide usage limits (usage is managed in AWS)
+- Claude Code may leave `rate_limits` empty until after the first model response in a session
 - Non-default `ANTHROPIC_BASE_URL` / `ANTHROPIC_API_BASE_URL` settings skip usage display, because the Anthropic OAuth usage API may not apply
 - If you are behind a proxy, set `HTTPS_PROXY` (or `HTTP_PROXY`/`ALL_PROXY`) and optional `NO_PROXY`
 - For high-latency environments, increase the usage API timeout with `CLAUDE_HUD_USAGE_TIMEOUT_MS` (milliseconds)

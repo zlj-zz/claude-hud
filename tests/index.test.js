@@ -207,7 +207,7 @@ test('main prefers stdin-native rate_limits over the usage API fallback', async 
   assert.equal(fallbackPlanCalls, 1);
   assert.deepEqual(renderedContext?.usageData, {
     planName: 'Max',
-    fiveHour: 21,
+    fiveHour: 22,
     sevenDay: 55,
     fiveHourResetAt: new Date(1710000000 * 1000),
     sevenDayResetAt: new Date(1710600000 * 1000),
