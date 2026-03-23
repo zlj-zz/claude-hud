@@ -6,6 +6,7 @@ export const DEFAULT_ELEMENT_ORDER = [
     'project',
     'context',
     'usage',
+    'memory',
     'environment',
     'tools',
     'agents',
@@ -38,6 +39,8 @@ export const DEFAULT_CONFIG = {
         showAgents: false,
         showTodos: false,
         showSessionName: false,
+        showClaudeCodeVersion: false,
+        showMemoryUsage: false,
         autocompactBuffer: 'enabled',
         usageThreshold: 0,
         sevenDayThreshold: 80,
@@ -70,7 +73,7 @@ function validateAutocompactBuffer(value) {
     return value === 'enabled' || value === 'disabled';
 }
 function validateContextValue(value) {
-    return value === 'percent' || value === 'tokens' || value === 'remaining';
+    return value === 'percent' || value === 'tokens' || value === 'remaining' || value === 'both';
 }
 function validateColorName(value) {
     return value === 'red'
@@ -217,6 +220,12 @@ export function mergeConfig(userConfig) {
         showSessionName: typeof migrated.display?.showSessionName === 'boolean'
             ? migrated.display.showSessionName
             : DEFAULT_CONFIG.display.showSessionName,
+        showClaudeCodeVersion: typeof migrated.display?.showClaudeCodeVersion === 'boolean'
+            ? migrated.display.showClaudeCodeVersion
+            : DEFAULT_CONFIG.display.showClaudeCodeVersion,
+        showMemoryUsage: typeof migrated.display?.showMemoryUsage === 'boolean'
+            ? migrated.display.showMemoryUsage
+            : DEFAULT_CONFIG.display.showMemoryUsage,
         autocompactBuffer: validateAutocompactBuffer(migrated.display?.autocompactBuffer)
             ? migrated.display.autocompactBuffer
             : DEFAULT_CONFIG.display.autocompactBuffer,

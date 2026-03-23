@@ -106,6 +106,9 @@ export function renderSessionLine(ctx) {
     if (display?.showSessionName && ctx.transcript.sessionName) {
         parts.push(dim(ctx.transcript.sessionName));
     }
+    if (display?.showClaudeCodeVersion && ctx.claudeCodeVersion) {
+        parts.push(dim(`CC v${ctx.claudeCodeVersion}`));
+    }
     // Config counts (respects environmentThreshold)
     if (display?.showConfigCounts !== false) {
         const totalCounts = ctx.claudeMdCount + ctx.rulesCount + ctx.mcpCount + ctx.hooksCount;
@@ -146,31 +149,43 @@ export function renderSessionLine(ctx) {
                 const syncingSuffix = ctx.usageData.apiError === 'rate-limited'
                     ? ` ${dim('(syncing...)')}`
                     : '';
-                const fiveHourDisplay = formatUsagePercent(fiveHour, colors);
-                const fiveHourReset = formatResetTime(ctx.usageData.fiveHourResetAt);
                 const usageBarEnabled = display?.usageBarEnabled ?? true;
-                const fiveHourPart = usageBarEnabled
-                    ? (fiveHourReset
-                        ? `${quotaBar(fiveHour ?? 0, barWidth, colors)} ${fiveHourDisplay} (${fiveHourReset} / 5h)`
-                        : `${quotaBar(fiveHour ?? 0, barWidth, colors)} ${fiveHourDisplay}`)
-                    : (fiveHourReset
-                        ? `5h: ${fiveHourDisplay} (${fiveHourReset})`
-                        : `5h: ${fiveHourDisplay}`);
-                const sevenDayThreshold = display?.sevenDayThreshold ?? 80;
-                if (sevenDay !== null && sevenDay >= sevenDayThreshold) {
-                    const sevenDayDisplay = formatUsagePercent(sevenDay, colors);
-                    const sevenDayReset = formatResetTime(ctx.usageData.sevenDayResetAt);
-                    const sevenDayPart = usageBarEnabled
-                        ? (sevenDayReset
-                            ? `${quotaBar(sevenDay, barWidth, colors)} ${sevenDayDisplay} (${sevenDayReset} / 7d)`
-                            : `${quotaBar(sevenDay, barWidth, colors)} ${sevenDayDisplay}`)
-                        : (sevenDayReset
-                            ? `7d: ${sevenDayDisplay} (${sevenDayReset})`
-                            : `7d: ${sevenDayDisplay}`);
-                    parts.push(`${fiveHourPart} | ${sevenDayPart}${syncingSuffix}`);
+                if (fiveHour === null && sevenDay !== null) {
+                    const weeklyOnlyPart = formatUsageWindowPart({
+                        label: '7d',
+                        percent: sevenDay,
+                        resetAt: ctx.usageData.sevenDayResetAt,
+                        colors,
+                        usageBarEnabled,
+                        barWidth,
+                        forceLabel: true,
+                    });
+                    parts.push(`${weeklyOnlyPart}${syncingSuffix}`);
                 }
                 else {
-                    parts.push(`${fiveHourPart}${syncingSuffix}`);
+                    const fiveHourPart = formatUsageWindowPart({
+                        label: '5h',
+                        percent: fiveHour,
+                        resetAt: ctx.usageData.fiveHourResetAt,
+                        colors,
+                        usageBarEnabled,
+                        barWidth,
+                    });
+                    const sevenDayThreshold = display?.sevenDayThreshold ?? 80;
+                    if (sevenDay !== null && sevenDay >= sevenDayThreshold) {
+                        const sevenDayPart = formatUsageWindowPart({
+                            label: '7d',
+                            percent: sevenDay,
+                            resetAt: ctx.usageData.sevenDayResetAt,
+                            colors,
+                            usageBarEnabled,
+                            barWidth,
+                        });
+                        parts.push(`${fiveHourPart} | ${sevenDayPart}${syncingSuffix}`);
+                    }
+                    else {
+                        parts.push(`${fiveHourPart}${syncingSuffix}`);
+                    }
                 }
             }
         }
@@ -215,13 +230,19 @@ function formatTokens(n) {
     return n.toString();
 }
 function formatContextValue(ctx, percent, mode) {
+    const totalTokens = getTotalTokens(ctx.stdin);
+    const size = ctx.stdin.context_window?.context_window_size ?? 0;
     if (mode === 'tokens') {
-        const totalTokens = getTotalTokens(ctx.stdin);
-        const size = ctx.stdin.context_window?.context_window_size ?? 0;
         if (size > 0) {
             return `${formatTokens(totalTokens)}/${formatTokens(size)}`;
         }
         return formatTokens(totalTokens);
+    }
+    if (mode === 'both') {
+        if (size > 0) {
+            return `${percent}% (${formatTokens(totalTokens)}/${formatTokens(size)})`;
+        }
+        return `${percent}%`;
     }
     if (mode === 'remaining') {
         return `${Math.max(0, 100 - percent)}%`;
@@ -234,6 +255,19 @@ function formatUsagePercent(percent, colors) {
     }
     const color = getQuotaColor(percent, colors);
     return `${color}${percent}%${RESET}`;
+}
+function formatUsageWindowPart({ label, percent, resetAt, colors, usageBarEnabled, barWidth, forceLabel = false, }) {
+    const usageDisplay = formatUsagePercent(percent, colors);
+    const reset = formatResetTime(resetAt);
+    if (usageBarEnabled) {
+        const body = reset
+            ? `${quotaBar(percent ?? 0, barWidth, colors)} ${usageDisplay} (${reset} / ${label})`
+            : `${quotaBar(percent ?? 0, barWidth, colors)} ${usageDisplay}`;
+        return forceLabel ? `${label}: ${body}` : body;
+    }
+    return reset
+        ? `${label}: ${usageDisplay} (${reset})`
+        : `${label}: ${usageDisplay}`;
 }
 function formatUsageError(error) {
     if (!error)

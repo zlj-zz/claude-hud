@@ -67,6 +67,9 @@ export function renderProjectLine(ctx) {
     if (display?.showSessionName && ctx.transcript.sessionName) {
         parts.push(dim(ctx.transcript.sessionName));
     }
+    if (display?.showClaudeCodeVersion && ctx.claudeCodeVersion) {
+        parts.push(dim(`CC v${ctx.claudeCodeVersion}`));
+    }
     if (ctx.extraLabel) {
         parts.push(dim(ctx.extraLabel));
     }

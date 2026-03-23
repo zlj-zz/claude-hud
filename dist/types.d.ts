@@ -18,6 +18,16 @@ export interface StdinData {
         used_percentage?: number | null;
         remaining_percentage?: number | null;
     };
+    rate_limits?: {
+        five_hour?: {
+            used_percentage?: number | null;
+            resets_at?: number | null;
+        } | null;
+        seven_day?: {
+            used_percentage?: number | null;
+            resets_at?: number | null;
+        } | null;
+    } | null;
 }
 export interface ToolEntry {
     id: string;
@@ -54,6 +64,12 @@ export interface UsageData {
     apiUnavailable?: boolean;
     apiError?: string;
 }
+export interface MemoryInfo {
+    totalBytes: number;
+    usedBytes: number;
+    freeBytes: number;
+    usedPercent: number;
+}
 /** Check if usage limit is reached (either window at 100%) */
 export declare function isLimitReached(data: UsageData): boolean;
 export interface TranscriptData {
@@ -73,7 +89,9 @@ export interface RenderContext {
     sessionDuration: string;
     gitStatus: GitStatus | null;
     usageData: UsageData | null;
+    memoryUsage: MemoryInfo | null;
     config: HudConfig;
     extraLabel: string | null;
+    claudeCodeVersion?: string;
 }
 //# sourceMappingURL=types.d.ts.map

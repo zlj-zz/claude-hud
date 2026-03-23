@@ -8,11 +8,15 @@ All notable changes to Claude HUD will be documented in this file.
 
 ### Added
 - Semantic HUD color overrides for context and usage states.
+- Opt-in combined context display mode.
+- Opt-in Claude Code version display in the HUD.
+- Opt-in approximate system RAM display in expanded layout.
 
 ### Changed
 - Update the fallback autocompact buffer estimate from `22.5%` (`45k/200k`) to `16.5%` (`33k/200k`) to match current Claude Code `/context` output.
-- Clarify in code comments that the fallback buffer is empirical and may change independently of documented Claude Code releases.
-- Clarify that context percentages and token displays scale with Claude Code's reported context window size, including newer 1M-context sessions.
+- Context percentages and token displays now scale with Claude Code's reported context window size, including newer 1M-context sessions.
+- Usage display now prefers stdin-native `rate_limits` when Claude Code provides them, falling back to the cached OAuth/API path only when needed.
+- Weekly-only usage now renders just the 7-day window instead of showing a blank 5-hour slot.
 - Text-only usage display now shows the 7-day reset countdown when applicable.
 - Rate-limited usage refreshes now keep the last successful values visible while marking the HUD as syncing.
 
@@ -22,6 +26,11 @@ All notable changes to Claude HUD will be documented in this file.
 - Zero-byte usage lock files now recover instead of leaving the HUD permanently busy.
 - Plugin selection now prefers the highest installed version instead of filesystem mtime.
 - macOS Keychain lookup now prefers account-scoped credentials and avoids cross-account fallback when multiple accounts exist.
+- Setup instructions now generate shell-safe Windows commands and respect `CLAUDE_CONFIG_DIR` when locating the plugin.
+- Setup command no longer loads project `.env` files while detecting the install.
+- Proxy tunnels now honor explicit `NODE_TLS_REJECT_UNAUTHORIZED` overrides.
+- Claude Code version lookup now supports Windows `.cmd` / `.bat` wrappers and avoids repeated path scans.
+- Transcript parsing avoids reparsing unchanged large transcripts on every refresh.
 
 ---
 
