@@ -79,6 +79,24 @@ function captureRenderLines(ctx) {
   return logs;
 }
 
+function withColumns(stream, columns, fn) {
+  const originalColumns = stream.columns;
+  Object.defineProperty(stream, 'columns', { value: columns, configurable: true });
+  try {
+    return fn();
+  } finally {
+    if (originalColumns === undefined) {
+      delete stream.columns;
+    } else {
+      Object.defineProperty(stream, 'columns', { value: originalColumns, configurable: true });
+    }
+  }
+}
+
+function withTerminal(columns, fn) {
+  return withColumns(process.stdout, columns, fn);
+}
+
 async function withDeterministicSpeedCache(fn) {
   const tempConfigDir = await mkdtemp(path.join(tmpdir(), 'claude-hud-render-'));
   const originalConfigDir = process.env.CLAUDE_CONFIG_DIR;
@@ -591,7 +609,7 @@ test('render expanded layout includes speed and duration on the project line', a
     ctx.config.display.showSpeed = true;
     ctx.sessionDuration = '12m 34s';
 
-    const lines = captureRenderLines(ctx);
+    const lines = withTerminal(120, () => captureRenderLines(ctx));
     const projectLine = lines.find(line => line.includes('my-project'));
 
     assert.ok(projectLine, 'expected an expanded project line');
@@ -1238,7 +1256,7 @@ test('renderUsageLine uses custom usage palette overrides', () => {
     sevenDayResetAt: null,
   };
 
-  const line = renderUsageLine(ctx);
+  const line = withTerminal(120, () => renderUsageLine(ctx));
   assert.ok(line, 'should render usage line');
   assert.ok(line.includes('\x1b[36m███'), `expected custom usage bar color, got: ${JSON.stringify(line)}`);
   assert.ok(line.includes('\x1b[36m25%\x1b[0m'), `expected custom usage percentage color, got: ${JSON.stringify(line)}`);
@@ -1456,7 +1474,7 @@ test('render expanded layout honors custom elementOrder including activity place
   ctx.config.display.showMemoryUsage = true;
   ctx.config.elementOrder = ['tools', 'project', 'usage', 'context', 'memory', 'environment', 'agents', 'todos'];
 
-  const lines = captureRenderLines(ctx);
+  const lines = withTerminal(120, () => captureRenderLines(ctx));
   const toolIndex = lines.findIndex(line => line.includes('Read'));
   const projectIndex = lines.findIndex(line => line.includes('my-project'));
   const combinedIndex = lines.findIndex(line => line.includes('Usage') && line.includes('Context'));
@@ -1532,7 +1550,7 @@ test('render expanded layout combines usage and context when adjacent in element
   };
   ctx.config.elementOrder = ['usage', 'context'];
 
-  const lines = captureRenderLines(ctx);
+  const lines = withTerminal(120, () => captureRenderLines(ctx));
 
   assert.equal(lines.length, 1, 'adjacent usage and context should share one expanded line');
   assert.ok(lines[0].includes('Usage'), 'combined line should include usage');

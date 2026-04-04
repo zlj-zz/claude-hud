@@ -13,6 +13,7 @@ import {
   renderMemoryLine,
 } from './lines/index.js';
 import { dim, RESET } from './colors.js';
+import { UNKNOWN_TERMINAL_WIDTH } from '../utils/terminal.js';
 
 // eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE_PATTERN = /^\x1b\[[0-9;]*m/;
@@ -25,7 +26,7 @@ function stripAnsi(str: string): string {
   return str.replace(ANSI_ESCAPE_GLOBAL, '');
 }
 
-function getTerminalWidth(): number | null {
+function getTerminalWidth(): number {
   const stdoutColumns = process.stdout?.columns;
   if (typeof stdoutColumns === 'number' && Number.isFinite(stdoutColumns) && stdoutColumns > 0) {
     return Math.floor(stdoutColumns);
@@ -43,7 +44,7 @@ function getTerminalWidth(): number | null {
     return envColumns;
   }
 
-  return null;
+  return UNKNOWN_TERMINAL_WIDTH;
 }
 
 function splitAnsiTokens(str: string): Array<{ type: 'ansi' | 'text'; value: string }> {
@@ -459,9 +460,7 @@ export function render(ctx: RenderContext): void {
   }
 
   const physicalLines = lines.flatMap(line => line.split('\n'));
-  const visibleLines = terminalWidth
-    ? physicalLines.flatMap(line => wrapLineToWidth(line, terminalWidth))
-    : physicalLines;
+  const visibleLines = physicalLines.flatMap(line => wrapLineToWidth(line, terminalWidth));
 
   for (const line of visibleLines) {
     const outputLine = `${RESET}${line}`;

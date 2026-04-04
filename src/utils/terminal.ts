@@ -1,5 +1,7 @@
+export const UNKNOWN_TERMINAL_WIDTH = 40;
+
 // Returns a progress bar width scaled to the current terminal width.
-// Wide (>=100): 10, Medium (60-99): 6, Narrow (<60): 4. Defaults to 10.
+// Wide (>=100): 10, Medium (60-99): 6, Narrow (<60): 4.
 export function getAdaptiveBarWidth(): number {
   const stdoutCols = process.stdout?.columns;
   const cols = (typeof stdoutCols === 'number' && Number.isFinite(stdoutCols) && stdoutCols > 0)
