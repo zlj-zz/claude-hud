@@ -70,5 +70,13 @@ export function paddedLabel(
   return label(padded, colors);
 }
 
+export function progressLabel(
+  key: MessageKey,
+  colors?: Partial<HudColorOverrides>,
+  align = false,
+): string {
+  return align ? paddedLabel(key, colors) : label(t(key), colors);
+}
+
 // Exported for testing only.
 export { plainTextWidth as _plainTextWidth, maxLabelWidth as _maxLabelWidth };

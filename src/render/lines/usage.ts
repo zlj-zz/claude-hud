@@ -5,9 +5,12 @@ import { getProviderLabel } from "../../stdin.js";
 import { critical, label, getQuotaColor, quotaBar, RESET } from "../colors.js";
 import { getAdaptiveBarWidth } from "../../utils/terminal.js";
 import { t } from "../../i18n/index.js";
-import { paddedLabel } from "./label-align.js";
+import { progressLabel } from "./label-align.js";
 
-export function renderUsageLine(ctx: RenderContext): string | null {
+export function renderUsageLine(
+  ctx: RenderContext,
+  alignLabels = false,
+): string | null {
   const display = ctx.config?.display;
   const colors = ctx.config?.colors;
 
@@ -23,7 +26,7 @@ export function renderUsageLine(ctx: RenderContext): string | null {
     return null;
   }
 
-  const usageLabel = paddedLabel("label.usage", colors);
+  const usageLabel = progressLabel("label.usage", colors, alignLabels);
 
   if (isLimitReached(ctx.usageData)) {
     const resetTime =
@@ -56,6 +59,7 @@ export function renderUsageLine(ctx: RenderContext): string | null {
       usageBarEnabled,
       barWidth,
       forceLabel: true,
+      alignLabels,
     });
     return `${usageLabel} ${weeklyOnlyPart}`;
   }
@@ -79,6 +83,7 @@ export function renderUsageLine(ctx: RenderContext): string | null {
       usageBarEnabled,
       barWidth,
       forceLabel: true,
+      alignLabels,
     });
     return `${usageLabel} ${fiveHourPart} | ${sevenDayPart}`;
   }
@@ -106,6 +111,7 @@ function formatUsageWindowPart({
   usageBarEnabled,
   barWidth,
   forceLabel = false,
+  alignLabels = false,
 }: {
   label: string;
   labelKey?: MessageKey;
@@ -115,11 +121,12 @@ function formatUsageWindowPart({
   usageBarEnabled: boolean;
   barWidth: number;
   forceLabel?: boolean;
+  alignLabels?: boolean;
 }): string {
   const usageDisplay = formatUsagePercent(percent, colors);
   const reset = formatResetTime(resetAt);
   const styledLabel = labelKey
-    ? paddedLabel(labelKey, colors)
+    ? progressLabel(labelKey, colors, alignLabels)
     : label(windowLabel, colors);
 
   if (usageBarEnabled) {

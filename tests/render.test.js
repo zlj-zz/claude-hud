@@ -554,7 +554,8 @@ test('label color overrides apply across shared secondary text surfaces', () => 
 
   const expected = '\x1b[38;2;171;205;239m';
   assert.ok(renderIdentityLine(ctx).includes(`${expected}Context\x1b[0m`));
-  assert.ok(renderUsageLine(ctx)?.includes(`${expected}Usage  \x1b[0m`));
+  assert.ok(renderUsageLine(ctx)?.includes(`${expected}Usage\x1b[0m`));
+  assert.ok(renderUsageLine(ctx, true)?.includes(`${expected}Usage  \x1b[0m`));
   assert.ok(renderEnvironmentLine(ctx)?.includes(`${expected}2 CLAUDE.md | 1 rules\x1b[0m`));
   assert.ok(renderMemoryLine({ ...ctx, config: { ...ctx.config, lineLayout: 'expanded', display: { ...ctx.config.display, showMemoryUsage: true } } })?.includes(`${expected}Approx RAM\x1b[0m`));
   assert.ok(renderToolsLine(ctx)?.includes(`${expected}: src/index.ts\x1b[0m`));
@@ -1240,7 +1241,7 @@ test('renderUsageLine shows 7d reset countdown in text-only mode', () => {
 
   const line = stripAnsi(renderUsageLine(ctx));
   assert.ok(line.includes('5h 45%'), `should include 5h text-only usage: ${line}`);
-  assert.ok(line.includes('Weekly  85%'), `should include 7d text-only usage: ${line}`);
+  assert.ok(line.includes('Weekly 85%'), `should include 7d text-only usage: ${line}`);
   assert.ok(line.includes('(resets in 1d 4h)'), `should include 7d reset countdown in text-only mode: ${line}`);
 });
 
@@ -1785,6 +1786,10 @@ test('render expanded layout combines usage and context when adjacent in element
   assert.ok(lines[0].includes('Usage'), 'combined line should include usage');
   assert.ok(lines[0].includes('Context'), 'combined line should include context');
   assert.ok(lines[0].includes('│'), 'combined line should preserve the shared separator');
+  const stripped = stripAnsi(lines[0]);
+  assert.ok(stripped.includes('Usage 5h 30%'), `combined line should keep the default unpadded usage label: ${stripped}`);
+  assert.ok(!stripped.includes('Usage  5h 30%'), `combined line should not pad the usage label: ${stripped}`);
+  assert.ok(!stripped.includes('Weekly '), `combined line should not pad the weekly label: ${stripped}`);
 });
 
 test('render expanded layout keeps usage and context separate when not adjacent', () => {
@@ -1808,6 +1813,31 @@ test('render expanded layout keeps usage and context separate when not adjacent'
   assert.ok(usageLine, 'usage should render on its own line');
   assert.ok(contextLine, 'context should render on its own line');
   assert.equal(combinedLine, undefined, 'usage and context should not combine when separated by another element');
+});
+
+test('render expanded layout aligns progress labels only after wrapping to separate lines', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'expanded';
+  ctx.usageData = {
+    planName: 'Team',
+    fiveHour: 45,
+    sevenDay: 85,
+    fiveHourResetAt: new Date(Date.now() + 90 * 60 * 1000),
+    sevenDayResetAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+  };
+  ctx.config.elementOrder = ['usage', 'context'];
+
+  const lines = withTerminal(24, () => captureRenderLines(ctx)).map(stripAnsi);
+  const usageLine = lines.find((line) => line.includes('Usage'));
+  const contextLine = lines.find((line) => line.includes('Context'));
+  const weeklyLine = lines.find((line) => line.includes('Weekly'));
+
+  assert.ok(usageLine, `narrow terminals should keep the usage line visible: ${lines.join(' | ')}`);
+  assert.ok(contextLine, `narrow terminals should keep the context line visible: ${lines.join(' | ')}`);
+  assert.ok(weeklyLine, `narrow terminals should keep the weekly segment visible: ${lines.join(' | ')}`);
+  assert.ok(usageLine.startsWith('Usage  '), `usage line should pad its label when stacked: ${usageLine}`);
+  assert.ok(weeklyLine.startsWith('Weekly '), `weekly label should pad when stacked: ${weeklyLine}`);
+  assert.ok(contextLine.startsWith('Context'), `context line should stay aligned with the padded usage label: ${contextLine}`);
 });
 
 test('render compact layout keeps activity lines even when elementOrder omits them', () => {
