@@ -209,7 +209,7 @@ function processEntry(entry, toolMap, agentMap, taskIdToIndex, latestTodos, resu
                 const input = block.input;
                 const agentEntry = {
                     id: block.id,
-                    type: input?.subagent_type ?? 'unknown',
+                    type: input?.subagent_type ?? 'agent',
                     model: input?.model ?? undefined,
                     description: input?.description ?? undefined,
                     status: 'running',
