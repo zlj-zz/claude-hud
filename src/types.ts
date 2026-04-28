@@ -4,6 +4,12 @@ import type { GitStatus } from './git.js';
 export interface StdinData {
   transcript_path?: string;
   cwd?: string;
+  workspace?: {
+    current_dir?: string;
+    project_dir?: string;
+    added_dirs?: string[];
+    git_worktree?: string;
+  } | null;
   model?: {
     id?: string;
     display_name?: string;

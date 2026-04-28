@@ -82,6 +82,19 @@ export function renderProjectLine(ctx: RenderContext): string | null {
     projectPart = safeHyperlink(getFileHref(ctx.stdin.cwd), coloredProject);
   }
 
+  let addedDirsPart: string | null = null;
+  const addedDirs = ctx.stdin.workspace?.added_dirs;
+  const addedDirsLayout = display?.addedDirsLayout ?? 'inline';
+  if (display?.showAddedDirs !== false && addedDirsLayout === 'inline' && addedDirs && addedDirs.length > 0) {
+    const rendered = addedDirs.map((dir) => {
+      const segments = dir.split(/[/\\]/).filter(Boolean);
+      const name = sanitizeDisplayText(segments[segments.length - 1] ?? dir);
+      const text = dim(`+${name}`);
+      return safeHyperlink(getFileHref(dir), text);
+    });
+    addedDirsPart = rendered.join(' ');
+  }
+
   let gitPart = '';
   const gitConfig = ctx.config?.gitStatus;
   const showGit = gitConfig?.enabled ?? true;
@@ -115,15 +128,19 @@ export function renderProjectLine(ctx: RenderContext): string | null {
     gitPart = `${gitColor('git:(', colors)}${gitInner.join(' ')}${gitColor(')', colors)}`;
   }
 
-  if (projectPart && gitPart) {
+  const projectWithDirs = projectPart && addedDirsPart
+    ? `${projectPart} ${addedDirsPart}`
+    : projectPart ?? addedDirsPart;
+
+  if (projectWithDirs && gitPart) {
     if (branchOverflow === 'wrap') {
-      parts.push(projectPart);
+      parts.push(projectWithDirs);
       parts.push(gitPart);
     } else {
-      parts.push(`${projectPart} ${gitPart}`);
+      parts.push(`${projectWithDirs} ${gitPart}`);
     }
-  } else if (projectPart) {
-    parts.push(projectPart);
+  } else if (projectWithDirs) {
+    parts.push(projectWithDirs);
   } else if (gitPart) {
     parts.push(gitPart);
   }

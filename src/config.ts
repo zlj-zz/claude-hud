@@ -19,7 +19,9 @@ export type GitBranchOverflowMode = 'truncate' | 'wrap';
  */
 export type ModelFormatMode = 'full' | 'compact' | 'short';
 export type TimeFormatMode = 'relative' | 'absolute' | 'both';
-export type HudElement = 'project' | 'context' | 'usage' | 'promptCache' | 'memory' | 'environment' | 'tools' | 'agents' | 'todos';
+export type HudElement = 'project' | 'addedDirs' | 'context' | 'usage' | 'promptCache' | 'memory' | 'environment' | 'tools' | 'agents' | 'todos';
+
+export type AddedDirsLayout = 'inline' | 'line';
 export type HudColorName =
   | 'dim'
   | 'red'
@@ -49,6 +51,7 @@ export interface HudColorOverrides {
 
 export const DEFAULT_ELEMENT_ORDER: HudElement[] = [
   'project',
+  'addedDirs',
   'context',
   'usage',
   'promptCache',
@@ -84,6 +87,8 @@ export interface HudConfig {
   display: {
     showModel: boolean;
     showProject: boolean;
+    showAddedDirs: boolean;
+    addedDirsLayout: AddedDirsLayout;
     showContextBar: boolean;
     contextValue: ContextValueMode;
     showConfigCounts: boolean;
@@ -142,6 +147,8 @@ export const DEFAULT_CONFIG: HudConfig = {
   display: {
     showModel: true,
     showProject: true,
+    showAddedDirs: true,
+    addedDirsLayout: 'inline',
     showContextBar: true,
     contextValue: 'percent',
     showConfigCounts: false,
@@ -441,6 +448,12 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     showProject: typeof migrated.display?.showProject === 'boolean'
       ? migrated.display.showProject
       : DEFAULT_CONFIG.display.showProject,
+    showAddedDirs: typeof migrated.display?.showAddedDirs === 'boolean'
+      ? migrated.display.showAddedDirs
+      : DEFAULT_CONFIG.display.showAddedDirs,
+    addedDirsLayout: (migrated.display?.addedDirsLayout === 'inline' || migrated.display?.addedDirsLayout === 'line')
+      ? migrated.display.addedDirsLayout
+      : DEFAULT_CONFIG.display.addedDirsLayout,
     showContextBar: typeof migrated.display?.showContextBar === 'boolean'
       ? migrated.display.showContextBar
       : DEFAULT_CONFIG.display.showContextBar,
