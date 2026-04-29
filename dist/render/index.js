@@ -6,6 +6,7 @@ import { renderTodosLine } from './todos-line.js';
 import { renderIdentityLine, renderProjectLine, renderGitFilesLine, renderEnvironmentLine, renderPromptCacheLine, renderUsageLine, renderMemoryLine, renderSessionTokensLine, } from './lines/index.js';
 import { dim, RESET } from './colors.js';
 import { getTerminalWidth, UNKNOWN_TERMINAL_WIDTH } from '../utils/terminal.js';
+import { codePointCellWidth, isCjkAmbiguousWide } from './width.js';
 // eslint-disable-next-line no-control-regex
 const ANSI_ESCAPE_PATTERN = /^(?:\x1b\[[0-9;]*m|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))/;
 // eslint-disable-next-line no-control-regex
@@ -48,21 +49,7 @@ function segmentGraphemes(text) {
     }
     return Array.from(GRAPHEME_SEGMENTER.segment(text), segment => segment.segment);
 }
-function isWideCodePoint(codePoint) {
-    return codePoint >= 0x1100 && (codePoint <= 0x115F || // Hangul Jamo
-        codePoint === 0x2329 ||
-        codePoint === 0x232A ||
-        (codePoint >= 0x2E80 && codePoint <= 0xA4CF && codePoint !== 0x303F) ||
-        (codePoint >= 0xAC00 && codePoint <= 0xD7A3) ||
-        (codePoint >= 0xF900 && codePoint <= 0xFAFF) ||
-        (codePoint >= 0xFE10 && codePoint <= 0xFE19) ||
-        (codePoint >= 0xFE30 && codePoint <= 0xFE6F) ||
-        (codePoint >= 0xFF00 && codePoint <= 0xFF60) ||
-        (codePoint >= 0xFFE0 && codePoint <= 0xFFE6) ||
-        (codePoint >= 0x1F300 && codePoint <= 0x1FAFF) ||
-        (codePoint >= 0x20000 && codePoint <= 0x3FFFD));
-}
-function graphemeWidth(grapheme) {
+function graphemeWidth(grapheme, ambiguousWide) {
     if (!grapheme || /^\p{Control}$/u.test(grapheme)) {
         return 0;
     }
@@ -78,8 +65,8 @@ function graphemeWidth(grapheme) {
         }
         hasVisibleBase = true;
         const codePoint = char.codePointAt(0);
-        if (codePoint !== undefined && isWideCodePoint(codePoint)) {
-            width = Math.max(width, 2);
+        if (codePoint !== undefined) {
+            width = Math.max(width, codePointCellWidth(codePoint, ambiguousWide));
         }
         else {
             width = Math.max(width, 1);
@@ -88,13 +75,14 @@ function graphemeWidth(grapheme) {
     return hasVisibleBase ? width : 0;
 }
 function visualLength(str) {
+    const ambiguousWide = isCjkAmbiguousWide();
     let width = 0;
     for (const token of splitAnsiTokens(str)) {
         if (token.type === 'ansi') {
             continue;
         }
         for (const grapheme of segmentGraphemes(token.value)) {
-            width += graphemeWidth(grapheme);
+            width += graphemeWidth(grapheme, ambiguousWide);
         }
     }
     return width;
@@ -103,6 +91,7 @@ function sliceVisible(str, maxVisible) {
     if (maxVisible <= 0) {
         return '';
     }
+    const ambiguousWide = isCjkAmbiguousWide();
     let result = '';
     let visibleWidth = 0;
     let done = false;
@@ -124,7 +113,7 @@ function sliceVisible(str, maxVisible) {
         }
         const plainChunk = str.slice(i, j);
         for (const grapheme of segmentGraphemes(plainChunk)) {
-            const graphemeCellWidth = graphemeWidth(grapheme);
+            const graphemeCellWidth = graphemeWidth(grapheme, ambiguousWide);
             if (visibleWidth + graphemeCellWidth > maxVisible) {
                 done = true;
                 break;
@@ -233,8 +222,14 @@ function wrapLineToWidth(line, maxWidth) {
     }
     return wrapped;
 }
+// `length` is a target visual width in cells.
+// `─` (U+2500) is East Asian Ambiguous-width: rendered as 2 cells in CJK
+// terminals and 1 cell elsewhere. Repeating it `length` times in CJK mode
+// would double the visual width and force the terminal to wrap.
 function makeSeparator(length) {
-    return dim('─'.repeat(Math.max(length, 1)));
+    const cellsPerDash = isCjkAmbiguousWide() ? 2 : 1;
+    const repeats = Math.max(1, Math.floor(length / cellsPerDash));
+    return dim('─'.repeat(repeats));
 }
 const ACTIVITY_ELEMENTS = new Set(['tools', 'agents', 'todos']);
 function buildMergeGroupLookup(mergeGroups) {

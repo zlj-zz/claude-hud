@@ -3,6 +3,7 @@ import type { MessageKey } from "../../i18n/types.js";
 /**
  * Compute the visual width of a plain-text string (no ANSI).
  * CJK ideographs count as 2 cells; ASCII characters count as 1.
+ * In CJK locales, East Asian Ambiguous-width chars also count as 2.
  */
 declare function plainTextWidth(str: string): number;
 /** Compute the max visual width across the three progress-bar labels. */

@@ -1,5 +1,6 @@
 import { label } from "../colors.js";
 import { t } from "../../i18n/index.js";
+import { codePointCellWidth, isCjkAmbiguousWide } from "../width.js";
 /** Label keys that should be aligned when rendered on separate lines. */
 const PROGRESS_LABEL_KEYS = [
     "label.context",
@@ -9,34 +10,21 @@ const PROGRESS_LABEL_KEYS = [
 /**
  * Compute the visual width of a plain-text string (no ANSI).
  * CJK ideographs count as 2 cells; ASCII characters count as 1.
+ * In CJK locales, East Asian Ambiguous-width chars also count as 2.
  */
 function plainTextWidth(str) {
+    const ambiguousWide = isCjkAmbiguousWide();
     let width = 0;
     for (const char of str) {
         const cp = char.codePointAt(0);
-        if (cp !== undefined && isWideCodePoint(cp)) {
-            width += 2;
+        if (cp !== undefined) {
+            width += codePointCellWidth(cp, ambiguousWide);
         }
         else {
             width += 1;
         }
     }
     return width;
-}
-function isWideCodePoint(codePoint) {
-    return (codePoint >= 0x1100 &&
-        (codePoint <= 0x115f ||
-            codePoint === 0x2329 ||
-            codePoint === 0x232a ||
-            (codePoint >= 0x2e80 && codePoint <= 0xa4cf && codePoint !== 0x303f) ||
-            (codePoint >= 0xac00 && codePoint <= 0xd7a3) ||
-            (codePoint >= 0xf900 && codePoint <= 0xfaff) ||
-            (codePoint >= 0xfe10 && codePoint <= 0xfe19) ||
-            (codePoint >= 0xfe30 && codePoint <= 0xfe6f) ||
-            (codePoint >= 0xff00 && codePoint <= 0xff60) ||
-            (codePoint >= 0xffe0 && codePoint <= 0xffe6) ||
-            (codePoint >= 0x1f300 && codePoint <= 0x1faff) ||
-            (codePoint >= 0x20000 && codePoint <= 0x3fffd)));
 }
 /** Compute the max visual width across the three progress-bar labels. */
 function maxLabelWidth() {
