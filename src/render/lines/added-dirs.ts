@@ -12,8 +12,23 @@ const CONTROL_AND_BIDI_PATTERN = new RegExp(
   'g',
 );
 
-function sanitize(value: string): string {
+export function sanitize(value: string): string {
   return value.replace(CONTROL_AND_BIDI_PATTERN, '');
+}
+
+function basenameOf(dir: string): string {
+  const segments = dir.split(/[/\\]/).filter(Boolean);
+  return segments[segments.length - 1] ?? dir;
+}
+
+export function normalizeAddedDirs(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (v): v is string =>
+      typeof v === 'string' &&
+      v.length > 0 &&
+      sanitize(basenameOf(v)).length > 0,
+  );
 }
 
 function getFileHref(filePath: string): string | null {
@@ -46,13 +61,12 @@ export function renderAddedDirsLine(ctx: RenderContext): string | null {
   if (display?.showAddedDirs === false) return null;
   if ((display?.addedDirsLayout ?? 'inline') !== 'line') return null;
 
-  const dirs = ctx.stdin.workspace?.added_dirs;
-  if (!dirs || dirs.length === 0) return null;
+  const dirs = normalizeAddedDirs(ctx.stdin.workspace?.added_dirs);
+  if (dirs.length === 0) return null;
 
   const colors = ctx.config?.colors;
   const rendered = dirs.map((dir) => {
-    const segments = dir.split(/[/\\]/).filter(Boolean);
-    const name = sanitize(segments[segments.length - 1] ?? dir);
+    const name = sanitize(basenameOf(dir));
     return safeHyperlink(getFileHref(dir), dim(name));
   });
 

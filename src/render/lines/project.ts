@@ -7,17 +7,12 @@ import { getOutputSpeed } from '../../speed-tracker.js';
 import { git as gitColor, gitBranch as gitBranchColor, warning as warningColor, critical as criticalColor, label, model as modelColor, project as projectColor, red, green, yellow, dim, custom as customColor } from '../colors.js';
 import { t } from '../../i18n/index.js';
 import { renderCostEstimate } from './cost.js';
-
-const CONTROL_AND_BIDI_PATTERN = /[\u0000-\u001F\u007F-\u009F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069\u206A-\u206F]/g;
+import { normalizeAddedDirs, sanitize as sanitizeDisplayText } from './added-dirs.js';
 
 function hyperlink(uri: string, text: string): string {
   const esc = '\x1b';
   const st = '\\';
   return `${esc}]8;;${uri}${esc}${st}${text}${esc}]8;;${esc}${st}`;
-}
-
-function sanitizeDisplayText(value: string): string {
-  return value.replace(CONTROL_AND_BIDI_PATTERN, '');
 }
 
 function getFileHref(filePath: string): string | null {
@@ -83,9 +78,9 @@ export function renderProjectLine(ctx: RenderContext): string | null {
   }
 
   let addedDirsPart: string | null = null;
-  const addedDirs = ctx.stdin.workspace?.added_dirs;
+  const addedDirs = normalizeAddedDirs(ctx.stdin.workspace?.added_dirs);
   const addedDirsLayout = display?.addedDirsLayout ?? 'inline';
-  if (display?.showAddedDirs !== false && addedDirsLayout === 'inline' && addedDirs && addedDirs.length > 0) {
+  if (display?.showAddedDirs !== false && addedDirsLayout === 'inline' && addedDirs.length > 0) {
     const rendered = addedDirs.map((dir) => {
       const segments = dir.split(/[/\\]/).filter(Boolean);
       const name = sanitizeDisplayText(segments[segments.length - 1] ?? dir);
