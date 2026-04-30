@@ -351,6 +351,182 @@ test("CLI truncates long inline added_dirs basenames", async (t) => {
   }
 });
 
+async function writeHudConfig(homeDir, config) {
+  const fs = await import("node:fs/promises");
+  const dir = path.join(homeDir, ".claude", "plugins", "claude-hud");
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(path.join(dir, "config.json"), JSON.stringify(config), "utf8");
+}
+
+test("CLI renders line layout 'Added dirs:' on a separate line", async (t) => {
+  const fixturePath = fileURLToPath(
+    new URL("./fixtures/transcript-render.jsonl", import.meta.url),
+  );
+  const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
+  const projectDir = path.join(homeDir, "dev", "apps", "my-project");
+  const dirA = path.join(homeDir, "dev", "apps", "shared-utils");
+  const dirB = path.join(homeDir, "dev", "apps", "mobile-app");
+  await import("node:fs/promises").then((fs) =>
+    Promise.all([
+      fs.mkdir(projectDir, { recursive: true }),
+      fs.mkdir(dirA, { recursive: true }),
+      fs.mkdir(dirB, { recursive: true }),
+    ]),
+  );
+  await writeHudConfig(homeDir, { display: { addedDirsLayout: "line" } });
+  try {
+    const stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: [dirA, dirB] },
+    });
+
+    const result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+
+    if (skipIfSpawnBlocked(result, t)) return;
+
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    const lines = stripAnsi(result.stdout).split("\n");
+    assert.doesNotMatch(lines[0], /\+shared-utils|\+mobile-app/, "inline + prefix should not appear in line mode");
+    const dirsLine = lines.find((l) => l.includes("Added dirs:"));
+    assert.ok(dirsLine, `expected an 'Added dirs:' line, got:\n${result.stdout}`);
+    assert.match(dirsLine, /shared-utils/);
+    assert.match(dirsLine, /mobile-app/);
+    assert.match(dirsLine, /shared-utils,\s*mobile-app/);
+    assert.doesNotMatch(dirsLine, /\bmore\b/, "two dirs should not trigger overflow");
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI renders inline added_dirs even when showProject is false", async (t) => {
+  const fixturePath = fileURLToPath(
+    new URL("./fixtures/transcript-render.jsonl", import.meta.url),
+  );
+  const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
+  const projectDir = path.join(homeDir, "dev", "apps", "my-project");
+  const addedDir = path.join(homeDir, "dev", "apps", "lib-foo");
+  await import("node:fs/promises").then((fs) =>
+    Promise.all([
+      fs.mkdir(projectDir, { recursive: true }),
+      fs.mkdir(addedDir, { recursive: true }),
+    ]),
+  );
+  await writeHudConfig(homeDir, { display: { showProject: false } });
+  try {
+    const stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: [addedDir] },
+    });
+
+    const result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+
+    if (skipIfSpawnBlocked(result, t)) return;
+
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    const firstLine = stripAnsi(result.stdout).split("\n")[0];
+    assert.match(firstLine, /\[Opus\]/, "model bracket should still render (sanity)");
+    assert.doesNotMatch(firstLine, /my-project/, "project name should be hidden");
+    assert.match(firstLine, /\+lib-foo/, "added dirs should still render");
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
+test("CLI applies caps in line layout (overflow + truncation)", async (t) => {
+  const fixturePath = fileURLToPath(
+    new URL("./fixtures/transcript-render.jsonl", import.meta.url),
+  );
+  const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
+  const projectDir = path.join(homeDir, "dev", "apps", "my-project");
+  const dirs = Array.from({ length: 7 }, (_, i) =>
+    path.join(homeDir, "dev", "apps", `dir-${i + 1}`),
+  );
+  const longName = "b".repeat(40);
+  const longDir = path.join(homeDir, "dev", "apps", longName);
+  await import("node:fs/promises").then((fs) =>
+    Promise.all([
+      fs.mkdir(projectDir, { recursive: true }),
+      fs.mkdir(longDir, { recursive: true }),
+      ...dirs.map((d) => fs.mkdir(d, { recursive: true })),
+    ]),
+  );
+  await writeHudConfig(homeDir, { display: { addedDirsLayout: "line" } });
+  try {
+    let stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: dirs },
+    });
+    let result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+    if (skipIfSpawnBlocked(result, t)) return;
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    let dirsLine = stripAnsi(result.stdout).split("\n").find((l) => l.includes("Added dirs:"));
+    assert.ok(dirsLine, `expected 'Added dirs:' line, got:\n${result.stdout}`);
+    assert.match(dirsLine, /dir-1/);
+    assert.match(dirsLine, /dir-5/);
+    assert.doesNotMatch(dirsLine, /dir-6/);
+    assert.doesNotMatch(dirsLine, /dir-7/);
+    assert.match(dirsLine, /\+2 more/);
+
+    stdin = JSON.stringify({
+      model: { display_name: "Opus" },
+      context_window: {
+        context_window_size: 200000,
+        current_usage: { input_tokens: 45000 },
+      },
+      transcript_path: fixturePath,
+      cwd: projectDir,
+      workspace: { added_dirs: [longDir] },
+    });
+    result = spawnSync("node", ["dist/index.js"], {
+      cwd: path.resolve(process.cwd()),
+      input: stdin,
+      encoding: "utf8",
+      env: { ...process.env, HOME: homeDir, LANG: "C" },
+    });
+    if (skipIfSpawnBlocked(result, t)) return;
+    assert.equal(result.status, 0, result.stderr || "non-zero exit");
+    dirsLine = stripAnsi(result.stdout).split("\n").find((l) => l.includes("Added dirs:"));
+    assert.ok(dirsLine, `expected 'Added dirs:' line, got:\n${result.stdout}`);
+    assert.match(dirsLine, /b+…/);
+    assert.doesNotMatch(dirsLine, new RegExp(longName));
+  } finally {
+    await rm(homeDir, { recursive: true, force: true });
+  }
+});
+
 test("CLI prints initializing message on empty stdin", async (t) => {
   const homeDir = await mkdtemp(path.join(tmpdir(), "claude-hud-home-"));
 
