@@ -203,32 +203,25 @@ function isAllUsageZero(usage: ContextWindow["current_usage"]): boolean {
 
 /**
  * Returns true when context window data looks like a Claude Code reporting
- * glitch rather than a genuine zero-usage state. Two conditions trigger this:
+ * glitch rather than a genuine zero-usage state.
  *
- * 1. Accumulated token totals (input or output) are non-zero but
- *    `used_percentage` is 0 — the percentage hasn't caught up with reality.
- * 2. Total input tokens exceed the declared window size, `used_percentage`
- *    is still 0, AND every field in `current_usage` is also zero — the frame
- *    is entirely empty despite an overflow-level token count.
- *
- * Returns false when data is clearly valid: no window size, tokens within
- * bounds, or a non-zero `used_percentage` that confirms real usage.
+ * We only treat a zero-percent frame as suspicious when accumulated totals are
+ * non-zero and `current_usage` is still empty. If `current_usage` already shows
+ * non-zero token counters, keep the live frame instead of restoring stale cache.
  */
 function isSuspiciousZero(contextWindow: ContextWindow): boolean {
   const usedPercentage = contextWindow.used_percentage ?? 0;
-  const contextWindowSize = contextWindow.context_window_size ?? 0;
+  if (usedPercentage !== 0) {
+    return false;
+  }
+
+  if (!isAllUsageZero(contextWindow.current_usage)) {
+    return false;
+  }
+
   const totalInputTokens = contextWindow.total_input_tokens ?? 0;
   const totalOutputTokens = contextWindow.total_output_tokens ?? 0;
-  if ((totalInputTokens > 0 || totalOutputTokens > 0) && usedPercentage === 0) {
-    return true;
-  }
-  if (contextWindowSize <= 0 || totalInputTokens <= contextWindowSize) {
-    return false;
-  }
-  if ((contextWindow.used_percentage ?? 0) !== 0) {
-    return false;
-  }
-  return isAllUsageZero(contextWindow.current_usage);
+  return totalInputTokens > 0 || totalOutputTokens > 0;
 }
 
 /**
