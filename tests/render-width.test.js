@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render } from '../dist/render/index.js';
+import { mergeConfig } from '../dist/config.js';
 import { setLanguage } from '../dist/i18n/index.js';
 
 function baseContext() {
@@ -212,6 +213,31 @@ test('render falls back to COLUMNS env when stdout.columns is unavailable', () =
 });
 
 
+test('render falls back to stderr.columns when stdout.columns and COLUMNS are unavailable', () => {
+  const ctx = baseContext();
+  const originalEnvColumns = process.env.COLUMNS;
+
+  let lines = [];
+  withColumns(process.stdout, undefined, () => {
+    withColumns(process.stderr, 12, () => {
+      delete process.env.COLUMNS;
+      try {
+        lines = captureRender(ctx);
+      } finally {
+        if (originalEnvColumns === undefined) {
+          delete process.env.COLUMNS;
+        } else {
+          process.env.COLUMNS = originalEnvColumns;
+        }
+      }
+    });
+  });
+
+  assert.ok(lines.length > 0, 'should still render output lines');
+  assert.ok(lines.every(line => displayWidth(line) <= 12), 'stderr width should be honored');
+  assert.ok(lines.some(line => displayWidth(line) > 10), 'stderr width should be used when no env override exists');
+});
+
 test('render does not use maxWidth over a detected 80-column width unless forceMaxWidth is enabled', () => {
   const ctx = baseContext();
   ctx.stdin.cwd = '/tmp/project';
@@ -224,6 +250,39 @@ test('render does not use maxWidth over a detected 80-column width unless forceM
   });
 
   assert.ok(lines.length > 1, 'should still wrap when only detected width is 80 and forceMaxWidth is disabled');
+});
+
+test('render ignores forceMaxWidth when maxWidth is null', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config.forceMaxWidth = true;
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.ok(lines.length > 1, 'should keep using detected width when forceMaxWidth is enabled without maxWidth');
+});
+
+test('render ignores forceMaxWidth when maxWidth is invalid in user config', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config = {
+    ...ctx.config,
+    ...mergeConfig({ maxWidth: 'wide', forceMaxWidth: true }),
+    display: ctx.config.display,
+    gitStatus: ctx.config.gitStatus,
+  };
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.ok(lines.length > 1, 'should keep using detected width when invalid maxWidth is normalized away');
 });
 
 test('render uses maxWidth over a detected 80-column width when forceMaxWidth is enabled', () => {
