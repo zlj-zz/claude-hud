@@ -29,6 +29,7 @@ function makeSuspiciousFrame(overrides = {}) {
     context_window: {
       context_window_size: 200000,
       total_input_tokens: 250000,
+      total_output_tokens: 250000,
       used_percentage: 0,
       remaining_percentage: 100,
       current_usage: {
@@ -170,37 +171,38 @@ test('applyContextWindowFallback ignores corrupted cache without throwing', asyn
   }
 });
 
-test('applyContextWindowFallback does not restore cache when zero frame has not overflowed the context window', async () => {
+test('applyContextWindowFallback keeps live usage when zero-percent frame already has current_usage data', async () => {
   const tempHome = await createTempHome();
   const transcriptPath = '/tmp/session-a.jsonl';
 
   try {
-    const cachePath = getCachePath(tempHome, transcriptPath);
-    await mkdir(path.dirname(cachePath), { recursive: true });
-    await writeFile(
-      cachePath,
-      JSON.stringify({
-        used_percentage: 61,
-        remaining_percentage: 39,
-        context_window_size: 200000,
-        current_usage: {
-          input_tokens: 120000,
-          output_tokens: 5000,
-          cache_creation_input_tokens: 1000,
-          cache_read_input_tokens: 800,
-        },
-        saved_at: 999_000,
-      }),
-      'utf8',
+    applyContextWindowFallback(
+      makeHealthyFrame(transcriptPath),
+      makeDeps(tempHome, 1_000_000),
     );
 
-    const stdin = makeSuspiciousFrame({ total_input_tokens: 200000 });
+    const stdin = makeSuspiciousFrame({
+      total_input_tokens: 50000,
+      total_output_tokens: 3000,
+      current_usage: {
+        input_tokens: 48000,
+        output_tokens: 2000,
+        cache_creation_input_tokens: 400,
+        cache_read_input_tokens: 100,
+      },
+    });
     stdin.transcript_path = transcriptPath;
 
-    applyContextWindowFallback(stdin, makeDeps(tempHome));
+    applyContextWindowFallback(stdin, makeDeps(tempHome, 1_100_000));
 
     assert.equal(stdin.context_window.used_percentage, 0);
     assert.equal(stdin.context_window.remaining_percentage, 100);
+    assert.deepEqual(stdin.context_window.current_usage, {
+      input_tokens: 48000,
+      output_tokens: 2000,
+      cache_creation_input_tokens: 400,
+      cache_read_input_tokens: 100,
+    });
   } finally {
     await rm(tempHome, { recursive: true, force: true });
   }
@@ -556,6 +558,78 @@ test('_sweepCacheForTests evicts oldest entries when over the entry cap', async 
     for (let i = TOTAL - CAP; i < TOTAL; i += 1) {
       assert.equal(existsSync(path.join(cacheDir, `entry-${i}.json`)), true, `entry-${i} should survive`);
     }
+  } finally {
+    await rm(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('applyContextWindowFallback restores cache for zero-percent frames with nonzero input totals and empty usage', async () => {
+  const tempHome = await createTempHome();
+  const transcriptPath = '/tmp/session-a.jsonl';
+
+  try {
+    applyContextWindowFallback(
+      makeHealthyFrame(transcriptPath),
+      makeDeps(tempHome, 1_000_000),
+    );
+
+    const stdin = makeSuspiciousFrame({ total_input_tokens: 50000, total_output_tokens: 0 });
+    stdin.transcript_path = transcriptPath;
+
+    applyContextWindowFallback(stdin, makeDeps(tempHome, 1_100_000));
+
+    assert.equal(stdin.context_window.used_percentage, 58);
+    assert.equal(stdin.context_window.remaining_percentage, 42);
+  } finally {
+    await rm(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('applyContextWindowFallback restores cache for zero-percent frames with nonzero output totals and empty usage', async () => {
+  const tempHome = await createTempHome();
+  const transcriptPath = '/tmp/session-a.jsonl';
+
+  try {
+    applyContextWindowFallback(
+      makeHealthyFrame(transcriptPath),
+      makeDeps(tempHome, 1_000_000),
+    );
+
+    const stdin = makeSuspiciousFrame({ total_input_tokens: 0, total_output_tokens: 3000 });
+    stdin.transcript_path = transcriptPath;
+
+    applyContextWindowFallback(stdin, makeDeps(tempHome, 1_100_000));
+
+    assert.equal(stdin.context_window.used_percentage, 58);
+    assert.equal(stdin.context_window.remaining_percentage, 42);
+  } finally {
+    await rm(tempHome, { recursive: true, force: true });
+  }
+});
+
+test('applyContextWindowFallback keeps legitimate zero/reset frames unchanged', async () => {
+  const tempHome = await createTempHome();
+  const transcriptPath = '/tmp/session-a.jsonl';
+
+  try {
+    applyContextWindowFallback(
+      makeHealthyFrame(transcriptPath),
+      makeDeps(tempHome, 1_000_000),
+    );
+
+    const stdin = makeSuspiciousFrame({ total_input_tokens: 0, total_output_tokens: 0 });
+    stdin.transcript_path = transcriptPath;
+
+    applyContextWindowFallback(stdin, makeDeps(tempHome, 1_100_000));
+
+    assert.equal(stdin.context_window.used_percentage, 0);
+    assert.equal(stdin.context_window.remaining_percentage, 100);
+    assert.deepEqual(stdin.context_window.current_usage, {
+      input_tokens: 0,
+      output_tokens: 0,
+      cache_creation_input_tokens: 0,
+      cache_read_input_tokens: 0,
+    });
   } finally {
     await rm(tempHome, { recursive: true, force: true });
   }
