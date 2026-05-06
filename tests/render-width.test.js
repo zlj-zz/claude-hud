@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { render } from '../dist/render/index.js';
+import { mergeConfig } from '../dist/config.js';
 import { setLanguage } from '../dist/i18n/index.js';
 
 function baseContext() {
@@ -211,6 +212,7 @@ test('render falls back to COLUMNS env when stdout.columns is unavailable', () =
   assert.ok(lines.every(line => displayWidth(line) <= 10), 'all lines should fit COLUMNS width');
 });
 
+
 test('render falls back to stderr.columns when stdout.columns and COLUMNS are unavailable', () => {
   const ctx = baseContext();
   const originalEnvColumns = process.env.COLUMNS;
@@ -236,6 +238,70 @@ test('render falls back to stderr.columns when stdout.columns and COLUMNS are un
   assert.ok(lines.some(line => displayWidth(line) > 10), 'stderr width should be used when no env override exists');
 });
 
+test('render does not use maxWidth over a detected 80-column width unless forceMaxWidth is enabled', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config.maxWidth = 300;
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.ok(lines.length > 1, 'should still wrap when only detected width is 80 and forceMaxWidth is disabled');
+});
+
+test('render ignores forceMaxWidth when maxWidth is null', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config.forceMaxWidth = true;
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.ok(lines.length > 1, 'should keep using detected width when forceMaxWidth is enabled without maxWidth');
+});
+
+test('render ignores forceMaxWidth when maxWidth is invalid in user config', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config = {
+    ...ctx.config,
+    ...mergeConfig({ maxWidth: 'wide', forceMaxWidth: true }),
+    display: ctx.config.display,
+    gitStatus: ctx.config.gitStatus,
+  };
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.ok(lines.length > 1, 'should keep using detected width when invalid maxWidth is normalized away');
+});
+
+test('render uses maxWidth over a detected 80-column width when forceMaxWidth is enabled', () => {
+  const ctx = baseContext();
+  ctx.stdin.cwd = '/tmp/project';
+  ctx.config.maxWidth = 300;
+  ctx.config.forceMaxWidth = true;
+  ctx.extraLabel = 'x'.repeat(120);
+
+  let lines = [];
+  withTerminal(80, () => {
+    lines = captureRender(ctx);
+  });
+
+  assert.equal(lines.length, 1, 'should keep the line intact when forceMaxWidth overrides a detected 80-column width');
+  assert.ok(lines[0].includes('x'.repeat(120)), 'should not truncate the long label when forceMaxWidth is enabled');
+  assert.ok(!lines[0].includes('...'), 'should avoid ellipsis truncation');
+});
+
 test('render ignores OSC 8 hyperlink sequences when measuring line width', () => {
   const ctx = baseContext();
   ctx.config.lineLayout = 'compact';
@@ -257,6 +323,7 @@ test('render ignores OSC 8 hyperlink sequences when measuring line width', () =>
   assert.ok(lines[0].includes('1m'), 'later elements should not be wrapped off the line');
   assert.ok(displayWidth(lines[0]) <= 47, 'visible width should respect terminal width');
 });
+
 
 test('render ignores BEL-terminated OSC 8 hyperlink sequences when measuring line width', () => {
   const ctx = baseContext();
