@@ -6,14 +6,11 @@ import { getOutputSpeed } from '../../speed-tracker.js';
 import { git as gitColor, gitBranch as gitBranchColor, warning as warningColor, critical as criticalColor, label, model as modelColor, project as projectColor, red, green, yellow, dim, custom as customColor } from '../colors.js';
 import { t } from '../../i18n/index.js';
 import { renderCostEstimate } from './cost.js';
-const CONTROL_AND_BIDI_PATTERN = /[\u0000-\u001F\u007F-\u009F\u061C\u200E\u200F\u202A-\u202E\u2066-\u2069\u206A-\u206F]/g;
+import { normalizeAddedDirs, sanitize as sanitizeDisplayText, basenameOf, truncateBasename, MAX_RENDERED_ADDED_DIRS } from './added-dirs.js';
 function hyperlink(uri, text) {
     const esc = '\x1b';
     const st = '\\';
     return `${esc}]8;;${uri}${esc}${st}${text}${esc}]8;;${esc}${st}`;
-}
-function sanitizeDisplayText(value) {
-    return value.replace(CONTROL_AND_BIDI_PATTERN, '');
 }
 function getFileHref(filePath) {
     try {
@@ -58,7 +55,7 @@ export function renderProjectLine(ctx) {
         const modelQualifier = providerLabel ?? undefined;
         let modelDisplay = modelQualifier ? `${model} | ${modelQualifier}` : model;
         if (ctx.effortLevel && ctx.effortSymbol) {
-            modelDisplay += ` ${ctx.effortSymbol}${ctx.effortLevel}`;
+            modelDisplay += ` ${ctx.effortSymbol} ${ctx.effortLevel}`;
         }
         else if (ctx.effortLevel) {
             modelDisplay += ` ${ctx.effortLevel}`;
@@ -72,6 +69,22 @@ export function renderProjectLine(ctx) {
         const projectPath = sanitizeDisplayText(segments.length > 0 ? segments.slice(-pathLevels).join('/') : '/');
         const coloredProject = projectColor(projectPath, colors);
         projectPart = safeHyperlink(getFileHref(ctx.stdin.cwd), coloredProject);
+    }
+    let addedDirsPart = null;
+    const addedDirs = normalizeAddedDirs(ctx.stdin.workspace?.added_dirs);
+    const addedDirsLayout = display?.addedDirsLayout ?? 'inline';
+    if (display?.showAddedDirs !== false && addedDirsLayout === 'inline' && addedDirs.length > 0) {
+        const visible = addedDirs.slice(0, MAX_RENDERED_ADDED_DIRS);
+        const overflow = addedDirs.length - visible.length;
+        const rendered = visible.map((dir) => {
+            const name = truncateBasename(sanitizeDisplayText(basenameOf(dir)));
+            const text = dim(`+${name}`);
+            return safeHyperlink(getFileHref(dir), text);
+        });
+        if (overflow > 0) {
+            rendered.push(dim(`+${overflow} more`));
+        }
+        addedDirsPart = rendered.join(' ');
     }
     let gitPart = '';
     const gitConfig = ctx.config?.gitStatus;
@@ -102,17 +115,20 @@ export function renderProjectLine(ctx) {
         }
         gitPart = `${gitColor('git:(', colors)}${gitInner.join(' ')}${gitColor(')', colors)}`;
     }
-    if (projectPart && gitPart) {
+    const projectWithDirs = projectPart && addedDirsPart
+        ? `${projectPart} ${addedDirsPart}`
+        : projectPart ?? addedDirsPart;
+    if (projectWithDirs && gitPart) {
         if (branchOverflow === 'wrap') {
-            parts.push(projectPart);
+            parts.push(projectWithDirs);
             parts.push(gitPart);
         }
         else {
-            parts.push(`${projectPart} ${gitPart}`);
+            parts.push(`${projectWithDirs} ${gitPart}`);
         }
     }
-    else if (projectPart) {
-        parts.push(projectPart);
+    else if (projectWithDirs) {
+        parts.push(projectWithDirs);
     }
     else if (gitPart) {
         parts.push(gitPart);

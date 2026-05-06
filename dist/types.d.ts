@@ -3,6 +3,12 @@ import type { GitStatus } from './git.js';
 export interface StdinData {
     transcript_path?: string;
     cwd?: string;
+    workspace?: {
+        current_dir?: string;
+        project_dir?: string;
+        added_dirs?: string[];
+        git_worktree?: string;
+    } | null;
     model?: {
         id?: string;
         display_name?: string;
@@ -10,6 +16,7 @@ export interface StdinData {
     context_window?: {
         context_window_size?: number;
         total_input_tokens?: number | null;
+        total_output_tokens?: number | null;
         current_usage?: {
             input_tokens?: number;
             output_tokens?: number;

@@ -3,7 +3,7 @@ import { renderSessionLine } from './session-line.js';
 import { renderToolsLine } from './tools-line.js';
 import { renderAgentsLine } from './agents-line.js';
 import { renderTodosLine } from './todos-line.js';
-import { renderIdentityLine, renderProjectLine, renderGitFilesLine, renderEnvironmentLine, renderPromptCacheLine, renderUsageLine, renderMemoryLine, renderSessionTokensLine, } from './lines/index.js';
+import { renderIdentityLine, renderProjectLine, renderAddedDirsLine, renderGitFilesLine, renderEnvironmentLine, renderPromptCacheLine, renderUsageLine, renderMemoryLine, renderSessionTokensLine, } from './lines/index.js';
 import { dim, RESET } from './colors.js';
 import { getTerminalWidth, UNKNOWN_TERMINAL_WIDTH } from '../utils/terminal.js';
 import { codePointCellWidth, isCjkAmbiguousWide } from './width.js';
@@ -284,6 +284,8 @@ function renderElementLine(ctx, element, options) {
     switch (element) {
         case 'project':
             return renderProjectLine(ctx);
+        case 'addedDirs':
+            return renderAddedDirsLine(ctx);
         case 'context':
             return renderIdentityLine(ctx, alignProgressLabels);
         case 'usage':
@@ -388,7 +390,10 @@ export function render(ctx) {
     const lineLayout = ctx.config?.lineLayout ?? 'expanded';
     const showSeparators = ctx.config?.showSeparators ?? false;
     const detectedWidth = getTerminalWidth({ preferEnv: true, fallback: UNKNOWN_TERMINAL_WIDTH });
-    const terminalWidth = detectedWidth ?? ctx.config?.maxWidth ?? UNKNOWN_TERMINAL_WIDTH;
+    const configuredMaxWidth = ctx.config?.maxWidth ?? UNKNOWN_TERMINAL_WIDTH;
+    const terminalWidth = ctx.config?.forceMaxWidth && configuredMaxWidth !== UNKNOWN_TERMINAL_WIDTH
+        ? configuredMaxWidth
+        : (detectedWidth ?? configuredMaxWidth ?? UNKNOWN_TERMINAL_WIDTH);
     let lines;
     if (lineLayout === 'expanded') {
         const renderedLines = renderExpanded(ctx, terminalWidth);

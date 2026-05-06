@@ -40,7 +40,7 @@ export function renderSessionLine(ctx) {
     const modelQualifier = providerLabel ?? undefined;
     let modelDisplay = modelQualifier ? `${model} | ${modelQualifier}` : model;
     if (ctx.effortLevel && ctx.effortSymbol) {
-        modelDisplay += ` ${ctx.effortSymbol}${ctx.effortLevel}`;
+        modelDisplay += ` ${ctx.effortSymbol} ${ctx.effortLevel}`;
     }
     else if (ctx.effortLevel) {
         modelDisplay += ` ${ctx.effortLevel}`;

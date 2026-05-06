@@ -160,19 +160,24 @@ function isAllUsageZero(usage) {
         (usage.cache_read_input_tokens ?? 0) === 0);
 }
 /**
- * Detect the known Claude Code glitch where usage is reported as zero
- * despite a large accumulated input token count.
+ * Returns true when context window data looks like a Claude Code reporting
+ * glitch rather than a genuine zero-usage state.
+ *
+ * We only treat a zero-percent frame as suspicious when accumulated totals are
+ * non-zero and `current_usage` is still empty. If `current_usage` already shows
+ * non-zero token counters, keep the live frame instead of restoring stale cache.
  */
 function isSuspiciousZero(contextWindow) {
-    const contextWindowSize = contextWindow.context_window_size ?? 0;
+    const usedPercentage = contextWindow.used_percentage ?? 0;
+    if (usedPercentage !== 0) {
+        return false;
+    }
+    if (!isAllUsageZero(contextWindow.current_usage)) {
+        return false;
+    }
     const totalInputTokens = contextWindow.total_input_tokens ?? 0;
-    if (contextWindowSize <= 0 || totalInputTokens <= contextWindowSize) {
-        return false;
-    }
-    if ((contextWindow.used_percentage ?? 0) !== 0) {
-        return false;
-    }
-    return isAllUsageZero(contextWindow.current_usage);
+    const totalOutputTokens = contextWindow.total_output_tokens ?? 0;
+    return totalInputTokens > 0 || totalOutputTokens > 0;
 }
 /**
  * Determine whether the current frame contains a usable context snapshot.

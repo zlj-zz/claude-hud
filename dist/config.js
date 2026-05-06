@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import { getHudPluginDir } from './claude-config-dir.js';
 export const DEFAULT_ELEMENT_ORDER = [
     'project',
+    'addedDirs',
     'context',
     'usage',
     'promptCache',
@@ -23,6 +24,7 @@ export const DEFAULT_CONFIG = {
     showSeparators: false,
     pathLevels: 1,
     maxWidth: null,
+    forceMaxWidth: false,
     elementOrder: [...DEFAULT_ELEMENT_ORDER],
     gitStatus: {
         enabled: true,
@@ -36,6 +38,8 @@ export const DEFAULT_CONFIG = {
     display: {
         showModel: true,
         showProject: true,
+        showAddedDirs: true,
+        addedDirsLayout: 'inline',
         showContextBar: true,
         contextValue: 'percent',
         showConfigCounts: false,
@@ -270,6 +274,9 @@ export function mergeConfig(userConfig) {
         ? Math.floor(rawMaxWidth)
         : null;
     const elementOrder = validateElementOrder(migrated.elementOrder);
+    const forceMaxWidth = typeof migrated.forceMaxWidth === 'boolean'
+        ? migrated.forceMaxWidth
+        : DEFAULT_CONFIG.forceMaxWidth;
     const gitStatus = {
         enabled: typeof migrated.gitStatus?.enabled === 'boolean'
             ? migrated.gitStatus.enabled
@@ -296,6 +303,12 @@ export function mergeConfig(userConfig) {
         showProject: typeof migrated.display?.showProject === 'boolean'
             ? migrated.display.showProject
             : DEFAULT_CONFIG.display.showProject,
+        showAddedDirs: typeof migrated.display?.showAddedDirs === 'boolean'
+            ? migrated.display.showAddedDirs
+            : DEFAULT_CONFIG.display.showAddedDirs,
+        addedDirsLayout: (migrated.display?.addedDirsLayout === 'inline' || migrated.display?.addedDirsLayout === 'line')
+            ? migrated.display.addedDirsLayout
+            : DEFAULT_CONFIG.display.addedDirsLayout,
         showContextBar: typeof migrated.display?.showContextBar === 'boolean'
             ? migrated.display.showContextBar
             : DEFAULT_CONFIG.display.showContextBar,
@@ -419,7 +432,7 @@ export function mergeConfig(userConfig) {
             ? migrated.colors.custom
             : DEFAULT_CONFIG.colors.custom,
     };
-    return { language, lineLayout, showSeparators, pathLevels, maxWidth, elementOrder, gitStatus, display, colors };
+    return { language, lineLayout, showSeparators, pathLevels, maxWidth, forceMaxWidth, elementOrder, gitStatus, display, colors };
 }
 export async function loadConfig() {
     const configPath = getConfigPath();
