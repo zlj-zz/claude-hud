@@ -254,10 +254,18 @@ function validateColorName(value: unknown): value is HudColorName {
     || value === 'brightMagenta';
 }
 
+const INVISIBLE_CODEPOINT = /[\p{Cc}\p{Cf}\p{Variation_Selector}]/u;
+
 function validateBarChar(value: unknown): value is string {
-  if (typeof value !== 'string') return false;
-  if (/[\x00-\x1f\x7f-\x9f]/.test(value)) return false;
-  return [...value].length === 1;
+  if (typeof value !== 'string' || value.length === 0) return false;
+
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+  if (Array.from(segmenter.segment(value)).length !== 1) return false;
+
+  for (const ch of value) {
+    if (!INVISIBLE_CODEPOINT.test(ch)) return true;
+  }
+  return false;
 }
 
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
