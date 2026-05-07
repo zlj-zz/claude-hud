@@ -772,6 +772,17 @@ test('mergeConfig rejects empty string for bar chars', () => {
   assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
 });
 
+test('mergeConfig rejects line and paragraph separators for bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: ' ' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: ' ' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects Unicode noncharacters for bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: '﷐' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '￾' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '￿' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
 test('mergeConfig independently validates barFilled and barEmpty', () => {
   const config = mergeConfig({ colors: { barFilled: '█', barEmpty: '‮' } });
   assert.equal(config.colors.barFilled, '█');

@@ -130,7 +130,7 @@ function validateColorName(value) {
         || value === 'brightBlue'
         || value === 'brightMagenta';
 }
-const INVISIBLE_CODEPOINT = /[\p{Cc}\p{Cf}\p{Variation_Selector}]/u;
+const UNSAFE_CODEPOINT = /[\p{Cc}\p{Cf}\p{Variation_Selector}\p{Zl}\p{Zp}\p{Cn}]/u;
 function validateBarChar(value) {
     if (typeof value !== 'string' || value.length === 0)
         return false;
@@ -138,7 +138,7 @@ function validateBarChar(value) {
     if (Array.from(segmenter.segment(value)).length !== 1)
         return false;
     for (const ch of value) {
-        if (!INVISIBLE_CODEPOINT.test(ch))
+        if (!UNSAFE_CODEPOINT.test(ch))
             return true;
     }
     return false;
