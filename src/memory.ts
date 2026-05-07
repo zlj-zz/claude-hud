@@ -1,5 +1,6 @@
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import type { MemoryInfo } from './types.js';
 
 type MemoryReader = () => { totalBytes: number; freeBytes: number };
@@ -26,6 +27,20 @@ const readDefaultMemory: MemoryReader = () => ({
   freeBytes: os.freemem(),
 });
 
+const readLinuxMemory: MemoryReader = () => {
+  try {
+    const content = readFileSync('/proc/meminfo', 'utf8');
+    const totalMatch = content.match(/^MemTotal:\s+(\d+)\s+kB/m);
+    const availMatch = content.match(/^MemAvailable:\s+(\d+)\s+kB/m);
+    if (!totalMatch || !availMatch) return readDefaultMemory();
+    const totalBytes = Number(totalMatch[1]) * 1024;
+    const freeBytes = Number(availMatch[1]) * 1024;
+    return { totalBytes, freeBytes };
+  } catch {
+    return readDefaultMemory();
+  }
+};
+
 const readMacOSMemory: MemoryReader = () => {
   try {
     const output = execFileSync('/usr/bin/vm_stat', {
@@ -43,7 +58,9 @@ const readMacOSMemory: MemoryReader = () => {
 };
 
 let readMemory: MemoryReader =
-  process.platform === 'darwin' ? readMacOSMemory : readDefaultMemory;
+  process.platform === 'darwin' ? readMacOSMemory :
+  process.platform === 'linux' ? readLinuxMemory :
+  readDefaultMemory;
 
 export async function getMemoryUsage(): Promise<MemoryInfo | null> {
   try {
@@ -88,5 +105,9 @@ export function formatBytes(bytes: number): string {
 }
 
 export function _setMemoryReaderForTests(reader: MemoryReader | null): void {
-  readMemory = reader ?? (process.platform === 'darwin' ? readMacOSMemory : readDefaultMemory);
+  readMemory = reader ?? (
+    process.platform === 'darwin' ? readMacOSMemory :
+    process.platform === 'linux' ? readLinuxMemory :
+    readDefaultMemory
+  );
 }
