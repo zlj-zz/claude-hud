@@ -29,6 +29,8 @@ export interface HudColorOverrides {
     gitBranch: HudColorValue;
     label: HudColorValue;
     custom: HudColorValue;
+    barFilled: string;
+    barEmpty: string;
 }
 export declare const DEFAULT_ELEMENT_ORDER: HudElement[];
 export declare const DEFAULT_MERGE_GROUPS: HudElement[][];
