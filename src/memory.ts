@@ -22,6 +22,22 @@ export function parseVmStat(
   };
 }
 
+export function parseLinuxMeminfo(
+  output: string,
+): { totalBytes: number; freeBytes: number } | null {
+  const totalMatch = output.match(/^MemTotal:\s+(\d+)\s+kB/m);
+  const availMatch = output.match(/^MemAvailable:\s+(\d+)\s+kB/m);
+  if (!totalMatch || !availMatch) return null;
+
+  const totalBytes = Number(totalMatch[1]) * 1024;
+  const freeBytes = Number(availMatch[1]) * 1024;
+  if (!Number.isFinite(totalBytes) || !Number.isFinite(freeBytes)) {
+    return null;
+  }
+
+  return { totalBytes, freeBytes };
+}
+
 const readDefaultMemory: MemoryReader = () => ({
   totalBytes: os.totalmem(),
   freeBytes: os.freemem(),
@@ -30,12 +46,7 @@ const readDefaultMemory: MemoryReader = () => ({
 const readLinuxMemory: MemoryReader = () => {
   try {
     const content = readFileSync('/proc/meminfo', 'utf8');
-    const totalMatch = content.match(/^MemTotal:\s+(\d+)\s+kB/m);
-    const availMatch = content.match(/^MemAvailable:\s+(\d+)\s+kB/m);
-    if (!totalMatch || !availMatch) return readDefaultMemory();
-    const totalBytes = Number(totalMatch[1]) * 1024;
-    const freeBytes = Number(availMatch[1]) * 1024;
-    return { totalBytes, freeBytes };
+    return parseLinuxMeminfo(content) ?? readDefaultMemory();
   } catch {
     return readDefaultMemory();
   }
