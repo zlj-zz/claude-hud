@@ -671,3 +671,125 @@ test('mergeConfig rejects invalid hex strings', () => {
   assert.equal(config.colors.usage, DEFAULT_CONFIG.colors.usage);
   assert.equal(config.colors.warning, DEFAULT_CONFIG.colors.warning);
 });
+
+test('mergeConfig accepts valid single-character barFilled and barEmpty', () => {
+  const config = mergeConfig({
+    colors: { barFilled: '●', barEmpty: '○' },
+  });
+  assert.equal(config.colors.barFilled, '●');
+  assert.equal(config.colors.barEmpty, '○');
+});
+
+test('mergeConfig accepts surrogate-pair emoji for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: '🟢', barEmpty: '🔴' },
+  });
+  assert.equal(config.colors.barFilled, '🟢');
+  assert.equal(config.colors.barEmpty, '🔴');
+});
+
+test('mergeConfig accepts CJK and Unicode symbols for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: '中', barEmpty: '★' },
+  });
+  assert.equal(config.colors.barFilled, '中');
+  assert.equal(config.colors.barEmpty, '★');
+});
+
+test('mergeConfig rejects control characters for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: '\n', barEmpty: '\x1b' },
+  });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});
+
+test('mergeConfig rejects C1 control characters for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: '\x80', barEmpty: '\x9f' },
+  });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});
+
+test('mergeConfig rejects multi-character strings for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: 'ab', barEmpty: '##' },
+  });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});
+
+test('mergeConfig rejects non-string types for bar chars', () => {
+  const config = mergeConfig({
+    colors: { barFilled: 123, barEmpty: true },
+  });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});
+
+test('mergeConfig rejects bidirectional control characters for bar chars', () => {
+  const bidiChars = ['‮', '‎', '‏', '‪', '‫', '‬', '‭', '⁦', '⁩'];
+  for (const ch of bidiChars) {
+    const config = mergeConfig({ colors: { barFilled: ch } });
+    assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled,
+      `should reject U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
+  }
+});
+
+test('mergeConfig rejects zero-width characters for bar chars', () => {
+  const zwChars = ['​', '‌', '‍', '﻿'];
+  for (const ch of zwChars) {
+    const config = mergeConfig({ colors: { barFilled: ch } });
+    assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled,
+      `should reject U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
+  }
+});
+
+test('mergeConfig rejects variation selectors for bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: '︀' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '️' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: String.fromCodePoint(0xE0100) } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects other invisible format characters for bar chars', () => {
+  const formatChars = ['­', '؜', '⁠'];
+  for (const ch of formatChars) {
+    const config = mergeConfig({ colors: { barFilled: ch } });
+    assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled,
+      `should reject U+${ch.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`);
+  }
+});
+
+test('mergeConfig rejects compound emoji with zero-width joiners for bar chars', () => {
+  const config = mergeConfig({ colors: { barFilled: '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}' } });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects invisible code points attached to visible bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: 'a\u202e' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '⭐\ufe0f' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects empty string for bar chars', () => {
+  const config = mergeConfig({ colors: { barFilled: '', barEmpty: '' } });
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});
+
+test('mergeConfig rejects line and paragraph separators for bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: ' ' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: ' ' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects Unicode noncharacters for bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: '﷐' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '￾' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '￿' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig independently validates barFilled and barEmpty', () => {
+  const config = mergeConfig({ colors: { barFilled: '█', barEmpty: '‮' } });
+  assert.equal(config.colors.barFilled, '█');
+  assert.equal(config.colors.barEmpty, DEFAULT_CONFIG.colors.barEmpty);
+});

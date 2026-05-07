@@ -208,6 +208,10 @@ Chinese HUD labels are available as an explicit opt-in. English stays the defaul
 | `colors.gitBranch` | color value | `cyan` | Color for the git branch and branch status text |
 | `colors.label` | color value | `dim` | Color for labels and secondary metadata such as `Context`, `Usage`, counts, and progress text |
 | `colors.custom` | color value | `208` | Color for the optional custom line |
+| `colors.barFilled` | string | `█` | Character used for the filled portion of progress bars |
+| `colors.barEmpty` | string | `░` | Character used for the empty portion of progress bars |
+
+`colors.barFilled` and `colors.barEmpty` accept a single visible grapheme. Control characters, invisible format characters (bidi controls, zero-width joiners, variation selectors), line/paragraph separators, and noncharacters are rejected. Wide characters (emoji, CJK) may affect bar alignment depending on the terminal.
 
 Supported color names: `dim`, `red`, `green`, `yellow`, `magenta`, `cyan`, `brightBlue`, `brightMagenta`. You can also use a 256-color number (`0-255`) or hex (`#rrggbb`).
 
