@@ -88,8 +88,6 @@ export const DEFAULT_CONFIG = {
         gitBranch: 'cyan',
         label: 'dim',
         custom: 208,
-        barFilled: '█',
-        barEmpty: '░',
     },
 };
 export function getConfigPath() {
@@ -129,19 +127,6 @@ function validateColorName(value) {
         || value === 'cyan'
         || value === 'brightBlue'
         || value === 'brightMagenta';
-}
-const UNSAFE_CODEPOINT = /[\p{Cc}\p{Cf}\p{Variation_Selector}\p{Zl}\p{Zp}\p{Cn}]/u;
-function validateBarChar(value) {
-    if (typeof value !== 'string' || value.length === 0)
-        return false;
-    const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
-    if (Array.from(segmenter.segment(value)).length !== 1)
-        return false;
-    for (const ch of value) {
-        if (!UNSAFE_CODEPOINT.test(ch))
-            return true;
-    }
-    return false;
 }
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 function validateColorValue(value) {
@@ -446,12 +431,6 @@ export function mergeConfig(userConfig) {
         custom: validateColorValue(migrated.colors?.custom)
             ? migrated.colors.custom
             : DEFAULT_CONFIG.colors.custom,
-        barFilled: validateBarChar(migrated.colors?.barFilled)
-            ? migrated.colors.barFilled
-            : DEFAULT_CONFIG.colors.barFilled,
-        barEmpty: validateBarChar(migrated.colors?.barEmpty)
-            ? migrated.colors.barEmpty
-            : DEFAULT_CONFIG.colors.barEmpty,
     };
     return { language, lineLayout, showSeparators, pathLevels, maxWidth, forceMaxWidth, elementOrder, gitStatus, display, colors };
 }

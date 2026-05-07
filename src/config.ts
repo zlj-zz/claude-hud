@@ -263,9 +263,9 @@ function validateBarChar(value: unknown): value is string {
   if (Array.from(segmenter.segment(value)).length !== 1) return false;
 
   for (const ch of value) {
-    if (!UNSAFE_CODEPOINT.test(ch)) return true;
+    if (UNSAFE_CODEPOINT.test(ch)) return false;
   }
-  return false;
+  return true;
 }
 
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;

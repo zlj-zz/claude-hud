@@ -761,9 +761,14 @@ test('mergeConfig rejects other invisible format characters for bar chars', () =
   }
 });
 
-test('mergeConfig accepts compound emoji (single grapheme) for bar chars', () => {
+test('mergeConfig rejects compound emoji with zero-width joiners for bar chars', () => {
   const config = mergeConfig({ colors: { barFilled: '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}' } });
-  assert.equal(config.colors.barFilled, '\u{1F468}‍\u{1F469}‍\u{1F467}‍\u{1F466}');
+  assert.equal(config.colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+});
+
+test('mergeConfig rejects invisible code points attached to visible bar chars', () => {
+  assert.equal(mergeConfig({ colors: { barFilled: 'a\u202e' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
+  assert.equal(mergeConfig({ colors: { barFilled: '⭐\ufe0f' } }).colors.barFilled, DEFAULT_CONFIG.colors.barFilled);
 });
 
 test('mergeConfig rejects empty string for bar chars', () => {
