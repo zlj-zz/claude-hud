@@ -122,6 +122,7 @@ export interface HudConfig {
     sevenDayThreshold: number;
     environmentThreshold: number;
     externalUsagePath: string;
+    externalUsageCommand: string;
     externalUsageFreshnessMs: number;
     modelFormat: ModelFormatMode;
     modelOverride: string;
@@ -183,6 +184,7 @@ export const DEFAULT_CONFIG: HudConfig = {
     sevenDayThreshold: 80,
     environmentThreshold: 0,
     externalUsagePath: '',
+    externalUsageCommand: '',
     externalUsageFreshnessMs: 300000,
     modelFormat: 'full',
     modelOverride: '',
@@ -560,6 +562,9 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     sevenDayThreshold: validateThreshold(migrated.display?.sevenDayThreshold, 100),
     environmentThreshold: validateThreshold(migrated.display?.environmentThreshold, 100),
     externalUsagePath: validateOptionalPath(migrated.display?.externalUsagePath),
+    externalUsageCommand: typeof migrated.display?.externalUsageCommand === 'string'
+      ? migrated.display.externalUsageCommand
+      : DEFAULT_CONFIG.display.externalUsageCommand,
     externalUsageFreshnessMs: validateFreshnessMs(migrated.display?.externalUsageFreshnessMs),
     modelFormat: validateModelFormat(migrated.display?.modelFormat)
       ? migrated.display.modelFormat

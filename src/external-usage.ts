@@ -1,4 +1,5 @@
 import * as fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import type { HudConfig } from './config.js';
 import type { ExternalUsageSnapshot, UsageData } from './types.js';
 
@@ -32,6 +33,71 @@ function parseUpdatedAt(value: unknown): number | null {
   return date ? date.getTime() : null;
 }
 
+function parseSnapshot(raw: string): ExternalUsageSnapshot | null {
+  try {
+    return JSON.parse(raw) as ExternalUsageSnapshot;
+  } catch {
+    return null;
+  }
+}
+
+function snapshotToUsageData(parsed: ExternalUsageSnapshot): UsageData | null {
+  const updatedAt = parseUpdatedAt(parsed.updated_at);
+  if (updatedAt === null) {
+    return null;
+  }
+
+  const fiveHour = parseUsagePercent(parsed.five_hour?.used_percentage);
+  const sevenDay = parseUsagePercent(parsed.seven_day?.used_percentage);
+  if (fiveHour === null && sevenDay === null) {
+    return null;
+  }
+
+  const fiveHourResetAt = parseDateValue(parsed.five_hour?.resets_at);
+  const sevenDayResetAt = parseDateValue(parsed.seven_day?.resets_at);
+
+  if (parsed.five_hour && parsed.five_hour.resets_at != null && fiveHourResetAt === null) {
+    return null;
+  }
+  if (parsed.seven_day && parsed.seven_day.resets_at != null && sevenDayResetAt === null) {
+    return null;
+  }
+
+  return {
+    fiveHour,
+    sevenDay,
+    fiveHourResetAt,
+    sevenDayResetAt,
+  };
+}
+
+/**
+ * Execute the external usage command synchronously to regenerate the snapshot file.
+ * Returns true if the command exited successfully.
+ */
+function runExternalUsageCommand(command: string): boolean {
+  try {
+    const result = spawnSync(command, {
+      shell: true,
+      stdio: 'pipe',
+      timeout: 10_000,
+      env: process.env,
+    });
+    return result.status === 0;
+  } catch {
+    return false;
+  }
+}
+
+function readSnapshotFile(snapshotPath: string): ExternalUsageSnapshot | null {
+  try {
+    const raw = fs.readFileSync(snapshotPath, 'utf8');
+    return parseSnapshot(raw);
+  } catch {
+    return null;
+  }
+}
+
 export function getUsageFromExternalSnapshot(
   config: HudConfig,
   now = Date.now(),
@@ -41,42 +107,34 @@ export function getUsageFromExternalSnapshot(
     return null;
   }
 
-  try {
-    const raw = fs.readFileSync(snapshotPath, 'utf8');
-    const parsed = JSON.parse(raw) as ExternalUsageSnapshot;
-    const updatedAt = parseUpdatedAt(parsed.updated_at);
-    if (updatedAt === null) {
-      return null;
-    }
+  const freshnessMs = config.display.externalUsageFreshnessMs;
+  const command = config.display.externalUsageCommand;
 
-    const freshnessMs = config.display.externalUsageFreshnessMs;
-    if (now - updatedAt > freshnessMs) {
-      return null;
-    }
+  // Try reading the file first
+  const snapshot = readSnapshotFile(snapshotPath);
+  let isStale = false;
+  if (snapshot !== null) {
+    const updatedAt = parseUpdatedAt(snapshot.updated_at);
+    isStale = updatedAt !== null && now - updatedAt > freshnessMs;
+  }
 
-    const fiveHour = parseUsagePercent(parsed.five_hour?.used_percentage);
-    const sevenDay = parseUsagePercent(parsed.seven_day?.used_percentage);
-    if (fiveHour === null && sevenDay === null) {
-      return null;
-    }
+  let parsed = snapshot;
 
-    const fiveHourResetAt = parseDateValue(parsed.five_hour?.resets_at);
-    const sevenDayResetAt = parseDateValue(parsed.seven_day?.resets_at);
+  // If missing or stale and a command is configured, regenerate
+  if ((parsed === null || isStale) && command) {
+    runExternalUsageCommand(command);
+    // Re-read after command execution
+    parsed = readSnapshotFile(snapshotPath);
+  }
 
-    if (parsed.five_hour && parsed.five_hour.resets_at != null && fiveHourResetAt === null) {
-      return null;
-    }
-    if (parsed.seven_day && parsed.seven_day.resets_at != null && sevenDayResetAt === null) {
-      return null;
-    }
-
-    return {
-      fiveHour,
-      sevenDay,
-      fiveHourResetAt,
-      sevenDayResetAt,
-    };
-  } catch {
+  if (parsed === null) {
     return null;
   }
+
+  const updatedAt = parseUpdatedAt(parsed.updated_at);
+  if (updatedAt === null || now - updatedAt > freshnessMs) {
+    return null;
+  }
+
+  return snapshotToUsageData(parsed);
 }

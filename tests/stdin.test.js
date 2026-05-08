@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
-import { readStdin, getProviderLabel } from '../dist/stdin.js';
+import { readStdin, getProviderLabel, shouldHideUsage } from '../dist/stdin.js';
 
 test('readStdin returns null for TTY input', async () => {
   const originalIsTTY = process.stdin.isTTY;
@@ -144,3 +144,4 @@ test('getProviderLabel returns null when CLAUDE_CODE_USE_BEDROCK=0', () => {
     else process.env.CLAUDE_CODE_USE_BEDROCK = orig;
   }
 });
+
