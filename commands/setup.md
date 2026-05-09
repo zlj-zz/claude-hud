@@ -97,14 +97,20 @@ This is a [Claude Code platform limitation](https://github.com/anthropics/claude
 
 ## Step 1: Detect Platform, Shell, and Runtime
 
-**IMPORTANT**: Use the environment context values (`Platform:` and `Shell:`), not `uname -s` or ad-hoc checks. The Bash tool may report MINGW/MSYS on Windows, so branch only by the context values.
+**IMPORTANT**: Use the environment context values (`Platform:` and `Shell:`) as your starting point. On `win32`, you **must also** check `$OSTYPE` via the Bash tool — Claude Code routes all statusLine commands through its internal bash environment (Git Bash / MSYS2) on Windows, regardless of the user's reported shell. When `$OSTYPE` is `msys` or `cygwin`, the PowerShell command format will fail silently because bash expands `$env:VAR`, `$p`, and `$(...)` expressions before PowerShell ever sees them (see [#531](https://github.com/jarrodwatts/claude-hud/issues/531)).
 
-| Platform | Shell | Command Format |
-|----------|-------|----------------|
-| `darwin` | any | bash (macOS instructions) |
-| `linux` | any | bash (Linux instructions) |
-| `win32` | `bash` (Git Bash, MSYS2) | bash - use Windows + Git Bash instructions. Never use PowerShell commands with bash. |
-| `win32` | `powershell`, `pwsh`, or `cmd` | PowerShell (use Windows + PowerShell instructions) |
+**On `win32`, run this check first:**
+```bash
+echo $OSTYPE
+```
+
+| Platform | Shell | OSTYPE | Command Format |
+|----------|-------|--------|----------------|
+| `darwin` | any | any | bash (macOS instructions) |
+| `linux` | any | any | bash (Linux instructions) |
+| `win32` | `bash` | any | bash — Windows + Git Bash instructions |
+| `win32` | `powershell`, `pwsh`, or `cmd` | `msys` or `cygwin` | bash — Windows + Git Bash instructions (CC uses Git Bash internally; PowerShell format fails silently) |
+| `win32` | `powershell`, `pwsh`, or `cmd` | other / empty | PowerShell — Windows + PowerShell instructions |
 
 ---
 
@@ -192,7 +198,9 @@ Instead, use `sort -V` (GNU version sort, included with Git for Windows) which a
    cols=$(stty size </dev/tty 2>/dev/null | awk '{print $2}'); export COLUMNS=$(( ${cols:-120} > 4 ? ${cols:-120} - 4 : 1 )); plugin_dir=$(ls -1d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/*/claude-hud/*/ 2>/dev/null | sort -V | tail -1); exec "{RUNTIME_PATH}" "${plugin_dir}{SOURCE}"
    ```
 
-**Windows + PowerShell** (Platform: `win32`, Shell: `powershell`, `pwsh`, or `cmd`):
+**Windows + PowerShell** (Platform: `win32`, Shell: `powershell`, `pwsh`, or `cmd`, OSTYPE: other/empty):
+
+> ⚠️ **Before proceeding**: if `echo $OSTYPE` returned `msys` or `cygwin`, use the **Windows + Git Bash** instructions above instead. Claude Code uses Git Bash internally on those systems and the PowerShell command format will fail silently.
 
 1. Get plugin path:
    ```powershell
@@ -343,6 +351,11 @@ Use AskUserQuestion:
    **Windows shell mismatch (for example, "bash not recognized")**:
    - Command format does not match `Platform:` + `Shell:`
    - Solution: re-run Step 1 branch logic and use the matching variant
+
+   **Windows: HUD shows only "initializing..." with no error (PowerShell shell, Git Bash CC)**:
+   - Root cause: `Shell: powershell` but Claude Code routes statusLine commands through Git Bash internally
+   - Check: run `echo $OSTYPE` in the Bash tool — if it returns `msys` or `cygwin`, this is the issue
+   - Solution: re-run setup; when OSTYPE is `msys`/`cygwin`, follow the Windows + Git Bash path in Step 1
 
    **Windows: PowerShell execution policy error**:
    - Run: `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned`
