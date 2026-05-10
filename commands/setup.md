@@ -97,7 +97,7 @@ This is a [Claude Code platform limitation](https://github.com/anthropics/claude
 
 ## Step 1: Detect Platform, Shell, and Runtime
 
-**IMPORTANT**: Use the environment context values (`Platform:` and `Shell:`) as your starting point. On `win32`, you **must also** check `$OSTYPE` via the Bash tool — Claude Code routes all statusLine commands through its internal bash environment (Git Bash / MSYS2) on Windows, regardless of the user's reported shell. When `$OSTYPE` is `msys` or `cygwin`, the PowerShell command format will fail silently because bash expands `$env:VAR`, `$p`, and `$(...)` expressions before PowerShell ever sees them (see [#531](https://github.com/jarrodwatts/claude-hud/issues/531)).
+**IMPORTANT**: Use the environment context values (`Platform:` and `Shell:`) as your starting point. On `win32`, also check `$OSTYPE` via the Bash tool. Some Windows sessions report `Shell: powershell` while the command path exposed to Claude Code is Git Bash/MSYS2. When `$OSTYPE` is `msys` or `cygwin`, the PowerShell command format can fail before PowerShell runs because bash expands `$env:VAR`, `$p`, and `$(...)` expressions first (see [#531](https://github.com/jarrodwatts/claude-hud/issues/531)).
 
 **On `win32`, run this check first:**
 ```bash
@@ -109,7 +109,7 @@ echo $OSTYPE
 | `darwin` | any | any | bash (macOS instructions) |
 | `linux` | any | any | bash (Linux instructions) |
 | `win32` | `bash` | any | bash — Windows + Git Bash instructions |
-| `win32` | `powershell`, `pwsh`, or `cmd` | `msys` or `cygwin` | bash — Windows + Git Bash instructions (CC uses Git Bash internally; PowerShell format fails silently) |
+| `win32` | `powershell`, `pwsh`, or `cmd` | `msys` or `cygwin` | bash — Windows + Git Bash instructions (the active command environment is MSYS/Cygwin; PowerShell syntax is unsafe here) |
 | `win32` | `powershell`, `pwsh`, or `cmd` | other / empty | PowerShell — Windows + PowerShell instructions |
 
 ---
@@ -200,7 +200,7 @@ Instead, use `sort -V` (GNU version sort, included with Git for Windows) which a
 
 **Windows + PowerShell** (Platform: `win32`, Shell: `powershell`, `pwsh`, or `cmd`, OSTYPE: other/empty):
 
-> ⚠️ **Before proceeding**: if `echo $OSTYPE` returned `msys` or `cygwin`, use the **Windows + Git Bash** instructions above instead. Claude Code uses Git Bash internally on those systems and the PowerShell command format will fail silently.
+> **Before proceeding**: if `echo $OSTYPE` returned `msys` or `cygwin`, use the **Windows + Git Bash** instructions above. In that environment, bash can expand PowerShell variables before PowerShell runs.
 
 1. Get plugin path:
    ```powershell
@@ -352,8 +352,8 @@ Use AskUserQuestion:
    - Command format does not match `Platform:` + `Shell:`
    - Solution: re-run Step 1 branch logic and use the matching variant
 
-   **Windows: HUD shows only "initializing..." with no error (PowerShell shell, Git Bash CC)**:
-   - Root cause: `Shell: powershell` but Claude Code routes statusLine commands through Git Bash internally
+   **Windows: HUD shows only "initializing..." with no error (PowerShell shell, MSYS/Cygwin command environment)**:
+   - Root cause: `Shell: powershell` with `$OSTYPE=msys` or `$OSTYPE=cygwin`, causing bash to process the command before PowerShell
    - Check: run `echo $OSTYPE` in the Bash tool — if it returns `msys` or `cygwin`, this is the issue
    - Solution: re-run setup; when OSTYPE is `msys`/`cygwin`, follow the Windows + Git Bash path in Step 1
 
