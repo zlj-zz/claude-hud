@@ -12,6 +12,8 @@ export const zh: Messages = {
   "label.estimatedCost": "估算",
   "label.cost": "费用",
   "label.tokens": "令牌",
+  "label.sessionStarted": "开始",
+  "label.lastReply": "上次回复",
 
   // Status
   "status.limitReached": "已达上限",
@@ -27,6 +29,8 @@ export const zh: Messages = {
   "format.out": "输出",
   "format.tok": "令牌",
   "format.tokPerSec": "tok/s",
+  "format.justNow": "刚刚",
+  "format.ago": "前",
 
   // Init
   "init.initializing": "[claude-hud] 正在初始化...",

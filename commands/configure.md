@@ -255,6 +255,8 @@ If user chooses "Remove", set `display.customLine` to `""` in config.
 | Session name | `display.showSessionName` |
 | Session duration | `display.showDuration` |
 | Session tokens | `display.showSessionTokens` |
+| Session start date | `display.showSessionStartDate` |
+| Last response time | `display.showLastResponseAt` |
 | Custom line | `display.customLine` |
 
 **Always true (not configurable):**

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { renderSessionTimeLine } from '../dist/render/lines/session-time.js';
+import { setLanguage } from '../dist/i18n/index.js';
 
 function makeCtx(overrides = {}) {
   return {
@@ -87,6 +88,7 @@ test('renders both when both toggles are on', () => {
   assert.ok(result.includes('Started:'));
   assert.ok(result.includes('Last reply:'));
   assert.ok(result.includes('30m ago'));
+  assert.equal(result.includes('function dim'), false);
 });
 
 test('returns null when showSessionStartDate is true but no sessionStart', () => {
@@ -147,4 +149,26 @@ test('formats seconds for very recent last response', () => {
   const result = renderSessionTimeLine(ctx, () => now);
   assert.ok(result);
   assert.ok(result.includes('45s ago'));
+});
+
+test('renders localized labels and relative suffix', () => {
+  setLanguage('zh');
+  try {
+    const lastReply = new Date(2026, 4, 8, 10, 0, 0);
+    const now = lastReply.getTime() + 5 * 60 * 1000;
+    const ctx = makeCtx({
+      display: { showSessionStartDate: true, showLastResponseAt: true },
+      transcript: {
+        sessionStart: new Date(2026, 4, 8, 9, 14, 0),
+        lastAssistantResponseAt: lastReply,
+      },
+    });
+    const result = renderSessionTimeLine(ctx, () => now);
+    assert.ok(result);
+    assert.ok(result.includes('开始:'));
+    assert.ok(result.includes('上次回复:'));
+    assert.ok(result.includes('5m前'));
+  } finally {
+    setLanguage('en');
+  }
 });
