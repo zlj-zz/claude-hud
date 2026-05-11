@@ -16,6 +16,7 @@ import { renderMemoryLine } from '../dist/render/lines/memory.js';
 import { renderIdentityLine } from '../dist/render/lines/identity.js';
 import { renderEnvironmentLine } from '../dist/render/lines/environment.js';
 import { renderSessionTokensLine } from '../dist/render/lines/session-tokens.js';
+import { renderSessionTimeLine } from '../dist/render/lines/session-time.js';
 import { getContextColor, getQuotaColor } from '../dist/render/colors.js';
 import { setLanguage } from '../dist/i18n/index.js';
 
@@ -186,6 +187,19 @@ test('renderSessionLine includes duration and formats large tokens', () => {
   assert.ok(line.includes('⏱️'));
   assert.ok(line.includes('685k') || line.includes('685.0k'), 'expected large input token display');
   assert.ok(line.includes('2k'), 'expected cache token display');
+});
+
+test('renderSessionLine includes session time when enabled in compact layout', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'compact';
+  ctx.config.display.showSessionStartDate = true;
+  ctx.config.display.showLastResponseAt = true;
+  ctx.transcript.sessionStart = new Date(2026, 4, 8, 9, 14, 0);
+  ctx.transcript.lastAssistantResponseAt = new Date(Date.now() - 5 * 60 * 1000);
+
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(line.includes('Started: 2026-05-08 09:14'), `should include session start: ${line}`);
+  assert.ok(line.includes('Last reply: 5m ago'), `should include last reply age: ${line}`);
 });
 
 test('renderSessionLine handles missing input tokens and cache creation usage', () => {
@@ -2048,6 +2062,17 @@ test('render expanded layout honors custom elementOrder including activity place
   assert.ok(memoryIndex < environmentIndex, 'environment line should follow memory');
   assert.ok(environmentIndex < agentIndex, 'agent line should follow environment');
   assert.ok(agentIndex < todoIndex, 'todo line should follow agent line');
+});
+
+test('render expanded layout includes sessionTime element when enabled', () => {
+  const ctx = baseContext();
+  ctx.config.lineLayout = 'expanded';
+  ctx.config.elementOrder = ['project', 'sessionTime'];
+  ctx.config.display.showSessionStartDate = true;
+  ctx.transcript.sessionStart = new Date(2026, 4, 8, 9, 14, 0);
+
+  const lines = captureRenderLines(ctx);
+  assert.ok(lines.some(line => line.includes('Started: 2026-05-08 09:14')), `should render sessionTime line: ${lines.join('\n')}`);
 });
 
 test('render expanded layout omits elements not present in elementOrder', () => {

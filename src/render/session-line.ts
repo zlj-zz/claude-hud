@@ -6,6 +6,7 @@ import { coloredBar, critical, git as gitColor, gitBranch as gitBranchColor, lab
 import { getAdaptiveBarWidth } from '../utils/terminal.js';
 import { renderCostEstimate } from './lines/cost.js';
 import { renderPromptCacheLine } from './lines/prompt-cache.js';
+import { renderSessionTimeLine } from './lines/session-time.js';
 import { t } from '../i18n/index.js';
 import type { TimeFormatMode, UsageValueMode } from '../config.js';
 import { formatResetTime } from './format-reset-time.js';
@@ -268,6 +269,11 @@ export function renderSessionLine(ctx: RenderContext): string {
 
   if (display?.showDuration !== false && ctx.sessionDuration) {
     parts.push(label(`⏱️  ${ctx.sessionDuration}`, colors));
+  }
+
+  const sessionTimeLine = renderSessionTimeLine(ctx);
+  if (sessionTimeLine) {
+    parts.push(sessionTimeLine);
   }
 
   const promptCacheLine = renderPromptCacheLine(ctx);
