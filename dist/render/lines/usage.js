@@ -22,6 +22,7 @@ export function renderUsageLine(ctx, alignLabels = false) {
     const showResetLabel = display?.showResetLabel ?? true;
     const resetsKey = timeFormat === 'absolute' ? "format.resets" : "format.resetsIn";
     const usageCompact = display?.usageCompact ?? false;
+    const usageValueMode = display?.usageValue ?? 'percent';
     if (isLimitReached(ctx.usageData)) {
         const resetTime = ctx.usageData.fiveHour === 100
             ? formatResetTime(ctx.usageData.fiveHourResetAt, timeFormat)
@@ -46,10 +47,10 @@ export function renderUsageLine(ctx, alignLabels = false) {
     const sevenDayThreshold = display?.sevenDayThreshold ?? 80;
     if (usageCompact) {
         const fiveHourPart = fiveHour !== null
-            ? formatCompactWindowPart("5h", fiveHour, ctx.usageData.fiveHourResetAt, timeFormat, colors)
+            ? formatCompactWindowPart("5h", fiveHour, ctx.usageData.fiveHourResetAt, timeFormat, colors, usageValueMode)
             : null;
         const sevenDayPart = (sevenDay !== null && (fiveHour === null || sevenDay >= sevenDayThreshold))
-            ? formatCompactWindowPart("7d", sevenDay, ctx.usageData.sevenDayResetAt, timeFormat, colors)
+            ? formatCompactWindowPart("7d", sevenDay, ctx.usageData.sevenDayResetAt, timeFormat, colors, usageValueMode)
             : null;
         if (fiveHourPart && sevenDayPart) {
             return `${fiveHourPart} | ${sevenDayPart}`;
@@ -71,6 +72,7 @@ export function renderUsageLine(ctx, alignLabels = false) {
             showResetLabel,
             forceLabel: true,
             alignLabels,
+            usageValueMode,
         });
         return `${usageLabel} ${weeklyOnlyPart}`;
     }
@@ -83,6 +85,7 @@ export function renderUsageLine(ctx, alignLabels = false) {
         barWidth,
         timeFormat,
         showResetLabel,
+        usageValueMode,
     });
     if (sevenDay !== null && sevenDay >= sevenDayThreshold) {
         const sevenDayPart = formatUsageWindowPart({
@@ -97,28 +100,30 @@ export function renderUsageLine(ctx, alignLabels = false) {
             showResetLabel,
             forceLabel: true,
             alignLabels,
+            usageValueMode,
         });
         return `${usageLabel} ${fiveHourPart} | ${sevenDayPart}`;
     }
     return `${usageLabel} ${fiveHourPart}`;
 }
-function formatCompactWindowPart(windowLabel, percent, resetAt, timeFormat, colors) {
-    const usageDisplay = formatUsagePercent(percent, colors);
+function formatCompactWindowPart(windowLabel, percent, resetAt, timeFormat, colors, usageValueMode = 'percent') {
+    const usageDisplay = formatUsagePercent(percent, colors, usageValueMode);
     const reset = formatResetTime(resetAt, timeFormat);
     const styledLabel = label(`${windowLabel}:`, colors);
     return reset
         ? `${styledLabel} ${usageDisplay} ${label(`(${reset})`, colors)}`
         : `${styledLabel} ${usageDisplay}`;
 }
-function formatUsagePercent(percent, colors) {
+function formatUsagePercent(percent, colors, mode = 'percent') {
     if (percent === null) {
         return label("--", colors);
     }
     const color = getQuotaColor(percent, colors);
-    return `${color}${percent}%${RESET}`;
+    const displayPercent = mode === 'remaining' ? Math.max(0, 100 - percent) : percent;
+    return `${color}${displayPercent}%${RESET}`;
 }
-function formatUsageWindowPart({ label: windowLabel, labelKey, percent, resetAt, colors, usageBarEnabled, barWidth, timeFormat = 'relative', showResetLabel, forceLabel = false, alignLabels = false, }) {
-    const usageDisplay = formatUsagePercent(percent, colors);
+function formatUsageWindowPart({ label: windowLabel, labelKey, percent, resetAt, colors, usageBarEnabled, barWidth, timeFormat = 'relative', showResetLabel, forceLabel = false, alignLabels = false, usageValueMode = 'percent', }) {
+    const usageDisplay = formatUsagePercent(percent, colors, usageValueMode);
     const reset = formatResetTime(resetAt, timeFormat);
     const styledLabel = labelKey
         ? progressLabel(labelKey, colors, alignLabels)
