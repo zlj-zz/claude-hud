@@ -6,4 +6,5 @@ export { renderPromptCacheLine, formatPromptCacheCountdown } from './prompt-cach
 export { renderUsageLine } from './usage.js';
 export { renderMemoryLine } from './memory.js';
 export { renderSessionTokensLine } from './session-tokens.js';
+export { renderSessionTimeLine } from './session-time.js';
 //# sourceMappingURL=index.js.map
