@@ -8,6 +8,7 @@ export type LineLayoutType = 'compact' | 'expanded';
 
 export type AutocompactBufferMode = 'enabled' | 'disabled';
 export type ContextValueMode = 'percent' | 'tokens' | 'remaining' | 'both';
+export type UsageValueMode = 'percent' | 'remaining';
 export type GitBranchOverflowMode = 'truncate' | 'wrap';
 
 /**
@@ -100,6 +101,7 @@ export interface HudConfig {
     showSpeed: boolean;
     showTokenBreakdown: boolean;
     showUsage: boolean;
+    usageValue: UsageValueMode;
     usageBarEnabled: boolean;
     showResetLabel: boolean;
     usageCompact: boolean;
@@ -161,6 +163,7 @@ export const DEFAULT_CONFIG: HudConfig = {
     showSpeed: false,
     showTokenBreakdown: true,
     showUsage: true,
+    usageValue: 'percent',
     usageBarEnabled: true,
     showResetLabel: true,
     usageCompact: false,
@@ -229,6 +232,10 @@ function validateGitBranchOverflow(value: unknown): value is GitBranchOverflowMo
 
 function validateContextValue(value: unknown): value is ContextValueMode {
   return value === 'percent' || value === 'tokens' || value === 'remaining' || value === 'both';
+}
+
+function validateUsageValue(value: unknown): value is UsageValueMode {
+  return value === 'percent' || value === 'remaining';
 }
 
 function validateLanguage(value: unknown): value is Language {
@@ -501,6 +508,9 @@ export function mergeConfig(userConfig: Partial<HudConfig>): HudConfig {
     showUsage: typeof migrated.display?.showUsage === 'boolean'
       ? migrated.display.showUsage
       : DEFAULT_CONFIG.display.showUsage,
+    usageValue: validateUsageValue(migrated.display?.usageValue)
+      ? migrated.display.usageValue
+      : DEFAULT_CONFIG.display.usageValue,
     usageBarEnabled: typeof migrated.display?.usageBarEnabled === 'boolean'
       ? migrated.display.usageBarEnabled
       : DEFAULT_CONFIG.display.usageBarEnabled,

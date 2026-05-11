@@ -54,7 +54,7 @@ function baseContext() {
       pathLevels: 1,
       elementOrder: ['project', 'context', 'usage', 'promptCache', 'memory', 'environment', 'tools', 'agents', 'todos'],
       gitStatus: { enabled: true, showDirty: true, showAheadBehind: false, showFileStats: false, branchOverflow: 'truncate', pushWarningThreshold: 0, pushCriticalThreshold: 0 },
-      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showCost: false, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageBarEnabled: false, showResetLabel: true, showTools: true, showAgents: true, showTodos: true, showSessionTokens: false, showSessionName: false, showClaudeCodeVersion: false, showMemoryUsage: false, showPromptCache: false, promptCacheTtlSeconds: 300, showOutputStyle: false, mergeGroups: [['context', 'usage']], autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0, customLine: '' },
+      display: { showModel: true, showProject: true, showContextBar: true, contextValue: 'percent', showConfigCounts: true, showCost: false, showDuration: true, showSpeed: false, showTokenBreakdown: true, showUsage: true, usageValue: 'percent', usageBarEnabled: false, showResetLabel: true, showTools: true, showAgents: true, showTodos: true, showSessionTokens: false, showSessionName: false, showClaudeCodeVersion: false, showMemoryUsage: false, showPromptCache: false, promptCacheTtlSeconds: 300, showOutputStyle: false, mergeGroups: [['context', 'usage']], autocompactBuffer: 'enabled', usageThreshold: 0, sevenDayThreshold: 80, environmentThreshold: 0, customLine: '' },
       colors: {
         context: 'green',
         usage: 'brightBlue',
@@ -1273,6 +1273,41 @@ test('renderSessionLine displays usage percentages (7d hidden when low)', () => 
   assert.ok(line.includes('6%'), 'should include 5h percentage');
 });
 
+test('renderSessionLine supports remaining-based usage display', () => {
+  const ctx = baseContext();
+  ctx.config.display.usageValue = 'remaining';
+  ctx.config.display.sevenDayThreshold = 80;
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 25,
+    sevenDay: 85,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(line.includes('5h 75%'), `should show remaining 5h usage: ${line}`);
+  assert.ok(line.includes('Weekly 15%'), `should show remaining weekly usage: ${line}`);
+});
+
+test('renderSessionLine supports remaining-based compact usage display', () => {
+  const ctx = baseContext();
+  ctx.config.display.usageCompact = true;
+  ctx.config.display.usageValue = 'remaining';
+  ctx.config.display.sevenDayThreshold = 80;
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 25,
+    sevenDay: 85,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(line.includes('5h: 75%'), `should show compact remaining 5h usage: ${line}`);
+  assert.ok(line.includes('7d: 15%'), `should show compact remaining 7d usage: ${line}`);
+});
+
 test('renderSessionLine shows 7d when approaching limit (>=80%)', () => {
   const ctx = baseContext();
   ctx.config.display.sevenDayThreshold = 80;
@@ -1389,6 +1424,36 @@ test('renderUsageLine shows 7d reset countdown in text-only mode', () => {
   assert.ok(line.includes('5h 45%'), `should include 5h text-only usage: ${line}`);
   assert.ok(line.includes('Weekly 85%'), `should include 7d text-only usage: ${line}`);
   assert.ok(line.includes('(resets in 1d 4h)'), `should include 7d reset countdown in text-only mode: ${line}`);
+});
+
+test('renderUsageLine supports remaining-based usage display with used-percent colors', () => {
+  const ctx = baseContext();
+  ctx.config.display.usageBarEnabled = false;
+  ctx.config.display.usageValue = 'remaining';
+  ctx.config.display.sevenDayThreshold = 80;
+  ctx.config.colors = {
+    ...ctx.config.colors,
+    usage: 'cyan',
+    usageWarning: 'magenta',
+  };
+  ctx.usageData = {
+    planName: 'Pro',
+    fiveHour: 25,
+    sevenDay: 85,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+  };
+
+  const line = renderUsageLine(ctx);
+  assert.ok(line, 'should render usage line');
+  assert.ok(
+    line.includes('\x1b[36m75%\x1b[0m'),
+    `expected remaining 5h usage with normal usage color, got: ${JSON.stringify(line)}`,
+  );
+  assert.ok(
+    line.includes('\x1b[35m15%\x1b[0m'),
+    `expected remaining weekly usage with used-percent warning color, got: ${JSON.stringify(line)}`,
+  );
 });
 
 test('renderUsageLine can hide reset label in text-only mode', () => {
