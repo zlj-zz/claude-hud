@@ -68,7 +68,7 @@ export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
     try {
       const { stdout: statusOut } = await execFileAsync(
         'git',
-        ['--no-optional-locks', 'status', '--porcelain'],
+        ['-c', 'core.quotePath=false', '--no-optional-locks', 'status', '--porcelain'],
         { cwd, timeout: 1000, encoding: 'utf8' }
       );
       const trimmed = statusOut.trim();
