@@ -70,11 +70,14 @@ export function getUsageFromExternalSnapshot(
       return null;
     }
 
+    const balanceLabel = typeof parsed.balance_label === 'string' ? parsed.balance_label.trim() : null;
+
     return {
       fiveHour,
       sevenDay,
       fiveHourResetAt,
       sevenDayResetAt,
+      balanceLabel,
     };
   } catch {
     return null;
