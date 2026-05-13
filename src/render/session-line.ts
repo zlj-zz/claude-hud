@@ -168,7 +168,9 @@ export function renderSessionLine(ctx: RenderContext): string {
     const showResetLabel = display?.showResetLabel ?? true;
     const usageValueMode = display?.usageValue ?? 'percent';
 
-    if (isLimitReached(ctx.usageData)) {
+    if (ctx.usageData.balanceLabel) {
+      parts.push(`${label(t('label.usage'), colors)} ${ctx.usageData.balanceLabel}`);
+    } else if (isLimitReached(ctx.usageData)) {
       const resetTime = ctx.usageData.fiveHour === 100
         ? formatResetTime(ctx.usageData.fiveHourResetAt, timeFormat)
         : formatResetTime(ctx.usageData.sevenDayResetAt, timeFormat);

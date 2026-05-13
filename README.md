@@ -232,7 +232,7 @@ Set `display.usageValue` to `remaining` to show quota left instead of quota used
 
 ClaudeHUD prefers the official statusline stdin payload. If `rate_limits` are missing, you can opt into a local sidecar fallback by setting `display.externalUsagePath` to a JSON snapshot written by another tool such as a proxy. Stdin still wins whenever both sources exist.
 
-The fallback snapshot must be fresh enough (`display.externalUsageFreshnessMs`) and include valid `updated_at`, `five_hour`, and/or `seven_day` fields. Invalid JSON, stale files, or invalid timestamps are ignored quietly.
+The fallback snapshot must be fresh enough (`display.externalUsageFreshnessMs`) and include valid `updated_at`, plus a `five_hour` window, `seven_day` window, or `balance_label`. `balance_label` is optional text for prepaid provider balances; it is trimmed, length-limited, and sanitized before display. Invalid JSON, stale files, or invalid timestamps are ignored quietly.
 
 Free/weekly-only accounts render the weekly window by itself instead of showing a ghost `5h: --` placeholder.
 
