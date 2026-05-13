@@ -29,6 +29,11 @@ export function renderUsageLine(
   }
 
   const usageLabel = progressLabel("label.usage", colors, alignLabels);
+
+  if (ctx.usageData.balanceLabel) {
+    return `${usageLabel} ${ctx.usageData.balanceLabel}`;
+  }
+
   const timeFormat: TimeFormatMode = display?.timeFormat ?? 'relative';
   const showResetLabel = display?.showResetLabel ?? true;
   const resetsKey = timeFormat === 'absolute' ? "format.resets" : "format.resetsIn";

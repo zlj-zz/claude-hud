@@ -1287,6 +1287,22 @@ test('renderSessionLine displays usage percentages (7d hidden when low)', () => 
   assert.ok(line.includes('6%'), 'should include 5h percentage');
 });
 
+test('renderSessionLine displays external balance labels', () => {
+  const ctx = baseContext();
+  ctx.usageData = {
+    planName: 'External',
+    fiveHour: null,
+    sevenDay: null,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+    balanceLabel: '¥6.35',
+  };
+
+  const line = stripAnsi(renderSessionLine(ctx));
+  assert.ok(line.includes('Usage ¥6.35'), `should show balance label in compact layout: ${line}`);
+  assert.ok(!line.includes('5h'), `should bypass percentage window rendering: ${line}`);
+});
+
 test('renderSessionLine supports remaining-based usage display', () => {
   const ctx = baseContext();
   ctx.config.display.usageValue = 'remaining';
@@ -1468,6 +1484,21 @@ test('renderUsageLine supports remaining-based usage display with used-percent c
     line.includes('\x1b[35m15%\x1b[0m'),
     `expected remaining weekly usage with used-percent warning color, got: ${JSON.stringify(line)}`,
   );
+});
+
+test('renderUsageLine displays external balance labels', () => {
+  const ctx = baseContext();
+  ctx.usageData = {
+    planName: 'External',
+    fiveHour: null,
+    sevenDay: null,
+    fiveHourResetAt: null,
+    sevenDayResetAt: null,
+    balanceLabel: '¥6.35',
+  };
+
+  const line = stripAnsi(renderUsageLine(ctx) ?? '');
+  assert.equal(line, 'Usage ¥6.35');
 });
 
 test('renderUsageLine can hide reset label in text-only mode', () => {
