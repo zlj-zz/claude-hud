@@ -74,6 +74,7 @@ export interface UsageData {
     sevenDay: number | null;
     fiveHourResetAt: Date | null;
     sevenDayResetAt: Date | null;
+    balanceLabel?: string | null;
 }
 export interface ExternalUsageSnapshot {
     five_hour?: {
@@ -85,6 +86,7 @@ export interface ExternalUsageSnapshot {
         resets_at?: string | number | null;
     } | null;
     updated_at?: string | number | null;
+    balance_label?: string | null;
 }
 export interface MemoryInfo {
     totalBytes: number;

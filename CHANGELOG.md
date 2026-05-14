@@ -4,6 +4,10 @@ All notable changes to Claude HUD will be documented in this file.
 
 ## [Unreleased]
 
+### Fixed
+- Windows + PowerShell `/claude-hud:setup` now writes a `statusline.ps1` wrapper with a guarded width fallback and corrected version-directory glob (#521).
+- Added Windows PowerShell 5.1 guidance for writing `settings.json` without a UTF-8 BOM.
+
 ## [0.0.12] - 2026-04-04
 
 ### Added

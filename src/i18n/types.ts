@@ -10,6 +10,8 @@ export type MessageKey =
   | "label.estimatedCost"
   | "label.cost"
   | "label.tokens"
+  | "label.sessionStarted"
+  | "label.lastReply"
   // Status
   | "status.limitReached"
   | "status.allTodosComplete"
@@ -23,6 +25,8 @@ export type MessageKey =
   | "format.out"
   | "format.tok"
   | "format.tokPerSec"
+  | "format.justNow"
+  | "format.ago"
   // Init
   | "init.initializing"
   | "init.macosNote";
